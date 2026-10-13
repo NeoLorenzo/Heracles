@@ -35,3 +35,13 @@ test("keeps browser-smoke configuration local to the development test path", asy
   assert.match(browserSmoke, /confirm-cancel-workout-button/);
   assert.doesNotMatch(browserSmoke, /service[_-]?role/i);
 });
+
+test("browser-smoke failures name the failing resource without echoing query strings", async () => {
+  const browserSmoke = await read("tests/browser_smoke.py");
+
+  assert.match(browserSmoke, /page\.on\("response", record_response\)/);
+  assert.match(browserSmoke, /message\.location\.get\("url"\)/);
+  assert.match(browserSmoke, /Failed HTTP responses:/);
+  assert.match(browserSmoke, /except Exception:\s+#[^\n]*\n\s+diagnostics = format_diagnostics\(browser_errors, failed_responses\)/);
+  assert.match(browserSmoke, /return f"\{parts\.scheme\}:\/\/\{parts\.netloc\}\{parts\.path\}"/);
+});
