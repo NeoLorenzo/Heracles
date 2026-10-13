@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import test from "node:test";
@@ -80,6 +81,32 @@ test("Heracles branding preserves deployment and PWA identity contracts", () => 
   assert.equal(packageJson.name, "heracles");
   assert.equal(packageLock.name, packageJson.name);
   assert.equal(packageLock.packages[""].name, packageJson.name);
+});
+
+test("retired Lorenzo's Lifting Ledger name does not appear outside documented exceptions", () => {
+  const retiredName = /lorenzo'?s lifting ledger|lorenzos-lifting-ledger|lifting[ _]ledger/i;
+  const allowed = new Set([
+    // Documents the retired name so it is not reintroduced.
+    "README.md",
+    // Guards production against the legacy GitHub Pages URL.
+    ".github/workflows/production-smoke.yml",
+    // Migrates pending edits stored under the legacy localStorage prefix.
+    "features/session/session-storage.js",
+    "tests/session-storage-migration.test.mjs",
+    "tests/branding.test.mjs",
+  ]);
+  const tracked = execFileSync("git", ["ls-files", "-z"], { cwd: root, encoding: "utf8" })
+    .split("\0")
+    .filter(Boolean);
+  const offenders = tracked.filter((file) => {
+    if (allowed.has(file) || !fs.existsSync(path.join(root, file))) return false;
+    const contents = fs.readFileSync(path.join(root, file));
+    if (contents.includes(0)) return false;
+    return retiredName.test(contents.toString("utf8"));
+  });
+  assert.deepEqual(offenders, []);
+
+  assert.match(read("supabase/config.toml"), /^project_id = "heracles"$/m);
 });
 
 

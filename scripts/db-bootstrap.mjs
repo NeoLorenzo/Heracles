@@ -38,7 +38,7 @@ function parseManifest() {
 function isolatedConfig() {
   const source = fs.readFileSync(path.join(SUPABASE_DIR, "config.toml"), "utf8");
   const config = source
-    .replace('project_id = "Lorenzos-Lifting-Ledger"', 'project_id = "heracles-bootstrap"')
+    .replace('project_id = "heracles"', 'project_id = "heracles-bootstrap"')
     .replace("[db.migrations]\nenabled = true", "[db.migrations]\nenabled = false")
     .replaceAll("54320", "55320").replaceAll("54321", "55321").replaceAll("54322", "55322")
     .replaceAll("54323", "55323").replaceAll("54324", "55324").replaceAll("54325", "55325")
