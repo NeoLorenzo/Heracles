@@ -42,6 +42,23 @@ test("browser-smoke failures name the failing resource without echoing query str
   assert.match(browserSmoke, /page\.on\("response", record_response\)/);
   assert.match(browserSmoke, /message\.location\.get\("url"\)/);
   assert.match(browserSmoke, /Failed HTTP responses:/);
-  assert.match(browserSmoke, /except Exception:\s+#[^\n]*\n\s+diagnostics = format_diagnostics\(browser_errors, failed_responses\)/);
+  assert.match(browserSmoke, /except Exception:\s+#[^\n]*\n\s+diagnostics = format_diagnostics\(browser_errors, failed_responses, supabase_failures\)/);
   assert.match(browserSmoke, /return f"\{parts\.scheme\}:\/\/\{parts\.netloc\}\{parts\.path\}"/);
+});
+
+test("browser-smoke Supabase failures classify the credential and error without echoing secrets", async () => {
+  const browserSmoke = await read("tests/browser_smoke.py");
+
+  assert.match(browserSmoke, /if response\.status >= 400:\s+supabase_failures\.append\(/);
+  assert.match(browserSmoke, /describe_credential\(headers, session\)/);
+  assert.match(browserSmoke, /bearer was the publishable key/);
+  assert.match(browserSmoke, /bearer was the seeded user access token/);
+  assert.match(browserSmoke, /Failed Supabase request details:/);
+  // Credentials are compared and described, never interpolated into diagnostics.
+  const diagnosticHelpers = browserSmoke.slice(
+    browserSmoke.indexOf("def decode_jwt_claims"),
+    browserSmoke.indexOf("def create_test_session"),
+  );
+  assert.ok(diagnosticHelpers.includes("def describe_credential"));
+  assert.doesNotMatch(diagnosticHelpers,/f"[^"\n]*\{(?:token|authorization|LOCAL_SUPABASE_KEY|session\["(?:access|refresh)_token"\])[^}]*\}/);
 });

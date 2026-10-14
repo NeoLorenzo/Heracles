@@ -1,6 +1,9 @@
+import base64
+import binascii
 import json
 import os
 import sys
+import time
 import urllib.request
 import uuid
 from urllib.parse import urlsplit
@@ -23,12 +26,68 @@ def describe_url(url):
     return f"{parts.scheme}://{parts.netloc}{parts.path}"
 
 
-def format_diagnostics(browser_errors, failed_responses):
+def decode_jwt_claims(token):
+    # Reads the unverified payload only to describe it; the token itself is never reported.
+    parts = token.split(".")
+    if len(parts) != 3:
+        return None
+    try:
+        payload = parts[1] + "=" * (-len(parts[1]) % 4)
+        claims = json.loads(base64.urlsafe_b64decode(payload))
+    except (ValueError, binascii.Error):
+        return None
+    return claims if isinstance(claims, dict) else None
+
+
+def describe_credential(headers, session):
+    # Names which credential a request carried without echoing any key or token value.
+    scheme, _, token = headers.get("authorization", "").partition(" ")
+    if scheme.lower() != "bearer" or not token:
+        return "no bearer Authorization header"
+    if token == LOCAL_SUPABASE_KEY:
+        return "bearer was the publishable key"
+    label = "bearer was the seeded user access token" if token == session["access_token"] else "bearer was an unrecognized token"
+    claims = decode_jwt_claims(token)
+    if claims is None:
+        return f"{label} (not a decodable JWT)"
+    now = int(time.time())
+    sub = "matches" if claims.get("sub") == session["user"]["id"] else "differs from"
+    details = [f"role={claims.get('role')}", f"sub {sub} the smoke user"]
+    if isinstance(claims.get("iat"), (int, float)):
+        details.append(f"issued {now - int(claims['iat'])}s ago")
+    if isinstance(claims.get("exp"), (int, float)):
+        details.append(f"expires in {int(claims['exp']) - now}s")
+    return f"{label}; " + ", ".join(details)
+
+
+def describe_error_body(response):
+    # PostgREST and Auth error codes distinguish an anonymous request from a rejected token.
+    details = []
+    try:
+        payload = json.loads(response.text())
+    except ValueError:
+        payload = None
+    if isinstance(payload, dict):
+        code = payload.get("code") or payload.get("error_code") or payload.get("error")
+        message = payload.get("message") or payload.get("msg") or payload.get("error_description")
+        if code:
+            details.append(f"code={code}")
+        if message:
+            details.append(f"message={str(message)[:200]}")
+    challenge = response.headers.get("www-authenticate")
+    if challenge:
+        details.append(f"www-authenticate={challenge[:200]}")
+    return ", ".join(details) or "no error body"
+
+
+def format_diagnostics(browser_errors, failed_responses, supabase_failures):
     details = []
     if browser_errors:
         details.append("Browser smoke emitted runtime errors:\n" + "\n".join(browser_errors))
     if failed_responses:
         details.append("Failed HTTP responses:\n" + "\n".join(failed_responses))
+    if supabase_failures:
+        details.append("Failed Supabase request details:\n" + "\n".join(supabase_failures))
     return "\n".join(details)
 
 
@@ -62,6 +121,7 @@ def main():
     session = create_test_session()
     browser_errors = []
     failed_responses = []
+    supabase_failures = []
 
     with sync_playwright() as playwright:
         browser = playwright.chromium.launch(channel="chrome", headless=True)
@@ -73,6 +133,11 @@ def main():
             headers = dict(request.headers)
             headers.pop("host", None)
             response = route.fetch(url=target_url, headers=headers)
+            if response.status >= 400:
+                supabase_failures.append(
+                    f"HTTP {response.status} {request.method} {describe_url(request.url)}: "
+                    f"{describe_credential(headers, session)}; {describe_error_body(response)}"
+                )
             route.fulfill(response=response)
 
         context.route(f"{FAKE_SUPABASE_URL}/**", proxy_local_supabase)
@@ -144,7 +209,7 @@ def main():
             expect(start_button).to_have_text("Create Session", timeout=20_000)
         except Exception:
             # A failed expectation would otherwise hide the browser errors that explain it.
-            diagnostics = format_diagnostics(browser_errors, failed_responses)
+            diagnostics = format_diagnostics(browser_errors, failed_responses, supabase_failures)
             if diagnostics:
                 print(diagnostics, file=sys.stderr)
             raise
@@ -152,7 +217,7 @@ def main():
         browser.close()
 
     if browser_errors:
-        raise RuntimeError(format_diagnostics(browser_errors, failed_responses))
+        raise RuntimeError(format_diagnostics(browser_errors, failed_responses, supabase_failures))
 
     print("Browser smoke passed: signed-out startup, authenticated routing, workout start, and cancellation.")
 
