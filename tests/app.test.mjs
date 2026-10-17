@@ -342,7 +342,7 @@ test("renders collapsed sessions with toggleable exercise-level muscle pills", a
   assert.match(app, /\.gt\("relevance", 0\)/);
   assert.match(app, /document\.createElement\("details"\)/);
   assert.match(app, /document\.createElement\("summary"\)/);
-  assert.match(app, /disclosure\.append\(summary, exerciseList\)/);
+  assert.match(app, /disclosure\.append\(summary\);[\s\S]*disclosure\.append\(exerciseList\)/);
   assert.doesNotMatch(app, /disclosure\.open\s*=|setAttribute\("open"/);
   assert.match(app, /exercise\.exercise_sets\.some\(isAnalyticalWorkingSet\)/);
   assert.match(app, /className = `muscle-pill muscle-group-\$\{muscle\.uiGroup\.code\}`/);
