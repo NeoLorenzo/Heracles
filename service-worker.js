@@ -1,4 +1,4 @@
-const CACHE_NAME = "heracles-v48";
+const CACHE_NAME = "heracles-v49";
 const APP_SHELL = [
   "/",
   "/index.html",
@@ -10,12 +10,14 @@ const APP_SHELL = [
   "/features/public-showcase.js?v=2",
   "/analytics.js",
   "/presets.js",
+  "/preset-ordering.js",
   "/body-weight.js",
   "/features/activity-heatmap.js",
   "/features/body-weight.js",
   "/features/body-circumference.js",
   "/features/dashboard.js",
   "/features/presets.js",
+  "/features/preset-order-settings.js",
   "/features/pull-to-refresh.js",
   "/features/session/session-storage.js",
   "/features/session/session-history-context.js",
@@ -23,6 +25,7 @@ const APP_SHELL = [
   "/features/session/session-rendering.js",
   "/features/session/session-recents.js",
   "/features/session/session-controller.js",
+  "/features/session/preset-order-inputs.js",
   "/features/session/history-correction.js",
   "/features/session/session-lifecycle.js",
   "/relative-e1rm.js",
@@ -41,6 +44,7 @@ const APP_SHELL = [
   "/docs/DESIGN_RULES.md",
   "/docs/BODY_WEIGHT_DATA.md",
   "/docs/MUSCLE_GROUP_TAXONOMY.md",
+  "/docs/PRESET_EXERCISE_ORDER.md",
   "/docs/EXERCISE_MUSCLE_COMPOSITION.md",
   "/docs/EXERCISE_TO_MUSCLE_HYPERTROPHIC_RELEVANCE.md",
   "/docs/MOVEMENT_PATTERN_COEFFICIENTS.md",

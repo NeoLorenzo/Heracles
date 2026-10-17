@@ -2352,3 +2352,54 @@ test("ISSUE 22: previous-set text labels dumbbell loads per dumbbell from the re
   assert.equal(formatInlinePreviousSet(previous, "Lateral Raise (Seated)", "Dumbbell"), "14 kg per dumbbell × 12 @ 1 RIR");
   assert.equal(formatInlinePreviousSet(previous, "Lateral Raise (Seated)", "Cable (unknown model) — Gym One"), "14 kg × 12 @ 1 RIR");
 });
+
+test("ISSUE 78: the live workout explains a preset-started order and stays quiet without one", () => {
+  const container = document.createElement("div");
+  const renderer = createSessionRenderer({ container, onSetFieldChange: () => {}, onSetFieldBlur: () => {} });
+  const baseState = {
+    exercises: [
+      { id: 101, exercise_id: 2, exercise_order: 1, exercises: { name: "Leg Curl (Machine) (Seated)" }, exercise_sets: [] },
+      { id: 102, exercise_id: 1, exercise_order: 2, exercises: { name: "Leg Extension (Machine)" }, exercise_sets: [] },
+    ],
+    gyms: [{ id: 10, name: "Power Gym" }],
+    equipmentByGym: new Map(),
+    equipmentOptionsByExercise: new Map(),
+    historyContextByExercise: new Map(),
+    syncState: SYNC_STATE.SAVED,
+    syncLabel: "Saved ✓",
+  };
+
+  renderer.renderLiveSession({
+    ...baseState,
+    session: {
+      id: 1,
+      gym_id: 10,
+      performed_on: "2026-10-17",
+      source_preset_name: "Lower",
+      exercise_order_basis: {
+        version: 1,
+        mode: "balanced_rotation",
+        alternateMuscleGroups: true,
+        strategy: "rotation",
+        presetName: "Lower",
+        exerciseCount: 2,
+        groupCount: 2,
+        previousSession: { id: 9, performedOn: "2026-10-12", presetName: "Lower" },
+        previousFirst: { id: 1, name: "Leg Extension (Machine)" },
+        first: { id: 2, name: "Leg Curl (Machine) (Seated)" },
+        addedExercises: [],
+        removedExercises: [],
+        unmappedExercises: [],
+        priorityGroups: [],
+        priorityExerciseCount: 0,
+      },
+    },
+  });
+  const note = container.querySelector(".live-order-note");
+  assert.ok(note, "A preset-started workout shows why it has this order");
+  assert.match(note.querySelector(".live-order-note-summary").textContent, /Leg Extension \(Machine\) went first last time, so Leg Curl \(Machine\) \(Seated\) goes first today\./);
+  assert.ok(note.querySelector(".live-order-note-details"), "Further detail sits behind a disclosure");
+
+  renderer.renderLiveSession({ ...baseState, session: { id: 2, gym_id: 10, performed_on: "2026-10-17", exercise_order_basis: null } });
+  assert.equal(container.querySelector(".live-order-note"), null, "Scratch and historical sessions show no order note");
+});
