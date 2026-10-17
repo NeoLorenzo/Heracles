@@ -44,7 +44,7 @@ The application has two access states:
 - **Signed out:** a crawlable public front page with **Sign in** in the top-right. It shows the product through an animated live-workout demo, a tour of each signed-in screen (clearly labelled as illustrative example data), a scroll-driven walk-through of one set from entry to progression, an e1RM calculator that runs the app's own `set-model.js`, and an explorer for the complete exercise-to-muscle hypertrophic-relevance matrix loaded from its authoritative CSV. It also covers principles, evidence boundaries, the Fabbro Systems context, and the Literature library.
 - **Signed in:** Home (start or resume a workout, a year-long heatmap of analytical working sets per day, plus recent sessions) and live-workout flow, Session History, My Data analytics, My Stuff preset management and workout-order preference, a Literature hub, Settings for body-weight data, and sign-out controls.
 
-The signed-in workout flow supports persistent session state, equipment-aware exercise history, previous-performance context, and recovery-oriented autosave behavior. From Session History, a completed workout can be deleted after confirmation or reopened in the live-workout editor for full correction (only while no other workout is in progress); discarding a correction restores the original. See [Workout session lifecycle](docs/WORKOUT_SESSION_LIFECYCLE.md). The application is deployed as a static GitHub Pages site and uses Supabase Auth plus owner-scoped workout data and global reference data in Postgres.
+The signed-in workout flow supports persistent session state, equipment-aware exercise history, previous-performance context, recovery-oriented autosave behavior, and a post-workout recap shown after a workout is successfully concluded. From Session History, a completed workout can be deleted after confirmation or reopened in the live-workout editor for full correction (only while no other workout is in progress); discarding a correction restores the original. See [Workout session lifecycle](docs/WORKOUT_SESSION_LIFECYCLE.md). The application is deployed as a static GitHub Pages site and uses Supabase Auth plus owner-scoped workout data and global reference data in Postgres.
 
 > **Branding note:** the product is **Heracles** everywhere: the GitHub repository (`NeoLorenzo/Heracles`), the Supabase project, and the canonical production application at `heracles.fabbrosystems.com`. "Lorenzo's Lifting Ledger" is a retired former name and must not be reintroduced. Early migrations still reference the original gym-data CSV filename as immutable import provenance; that is historical data, not product branding.
 
@@ -113,6 +113,10 @@ For each representative RIR 0–3 working set, strength progression preserves fo
 
 The four-value model spread is not averaged into one estimate, is not a confidence interval or a measured true 1RM, and does not introduce a literature-derived true-RIR uncertainty model. High-RIR `4+` sets are excluded because their open-ended RIR cannot provide a finite adjusted repetition count. Relative presentation divides each formula value independently by body weight on the workout date; it does not store or replace those absolute estimates.
 
+### Post-workout recap
+
+After a successful conclusion, the recap summarises the stored session (date, exercises, RIR 0–3 working sets; no duration, because session end times are not stored) and compares each exercise on the same canonical equipment, at any gym, with the latest earlier comparable completed session. It uses one clearly labelled value, the lower of the observed Brzycki and Epley estimates from completed reps of the existing representative working set. Changes under 1 % either way are shown as Similar, which is a product display rule. A new best is reported separately from beating the last session, and first sessions are baselines. The recap shows a transparent count rather than a workout score. It can be reopened from any completed session in Session History, and shared as an image card or text through the device share sheet. Shared output leaves out the gym name. See [Post-workout recap](docs/POST_WORKOUT_RECAP.md).
+
 ## Live infrastructure
 
 - App: <https://heracles.fabbrosystems.com/> — canonical production domain for Heracles.
@@ -155,6 +159,9 @@ npm test
 - `features/preset-order-settings.js` — My Stuff workout-order preference controller
 - `features/session/preset-order-inputs.js` — loads the preset, preference, and previous completed session used to plan a preset workout's order
 - `relative-e1rm.js` — pure absolute-to-relative e1RM range and effective-mode helpers
+- `workout-recap.js` — pure post-workout recap calculations (comparable-series selection, change classification, new-best detection)
+- `features/workout-recap.js` — post-workout recap loader, renderer, and share flow, opened after a successful workout conclusion or from Session History
+- `features/workout-recap-card.js` — browser-only canvas renderer for the shareable recap image card
 - `literature.js` — safe in-app Markdown rendering and the Literature document registry
 - `config.js` — public browser configuration only
 - `styles.css` — shared base styles and the Fabbro Application Sidebar shell

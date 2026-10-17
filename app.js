@@ -5,6 +5,7 @@ import { createBodyWeightFeature } from "./features/body-weight.js";
 import { createPresetFeature } from "./features/presets.js";
 import { createDashboardFeature } from "./features/dashboard.js";
 import { createSessionFeature } from "./features/session/session-controller.js";
+import { RECAP_ORIGIN, createWorkoutRecapFeature } from "./features/workout-recap.js";
 import { createPresetOrderSettingsFeature } from "./features/preset-order-settings.js";
 import { persistSessionHistoryExerciseCorrection } from "./features/session/history-correction.js";
 import {
@@ -25,6 +26,7 @@ const PAGE_TITLES = Object.freeze({
   home: "Home",
   "live-session": "Live Workout",
   "session-history": "Session history",
+  "workout-recap": "Workout recap",
   "my-data": "My data",
   "my-stuff": "My Stuff",
   literature: "Literature",
@@ -139,13 +141,17 @@ const liveSessionFeature = createSessionFeature({
   ensureExerciseCatalogue: () => ensureGlobalExerciseCatalogue(supabaseClient),
   ensureExerciseMuscleLookup: () => ensureExerciseMuscleLookup(supabaseClient),
   onNavigate: (page) => showPage(page),
-  onSessionConcluded: (_sessionId, { wasHistoryCorrection = false } = {}) => {
+  onSessionConcluded: (concludedSessionId, { wasHistoryCorrection = false } = {}) => {
     activeWorkoutSession = null;
     activeSessionLoadedForUser = activeUserId;
     updateSessionButton();
-    // A saved correction returns to the history it corrected, refreshed from the server.
-    if (wasHistoryCorrection) resetSessionResults();
-    showPage(wasHistoryCorrection ? "session-history" : "home");
+    if (wasHistoryCorrection) {
+      // A saved correction returns to the history it corrected, refreshed from the server.
+      resetSessionResults();
+      showPage("session-history");
+    } else {
+      showWorkoutRecap(concludedSessionId);
+    }
     dashboardFeature.invalidate();
     if (activeUserId && supabaseClient) void loadSessions(supabaseClient);
   },
@@ -168,6 +174,17 @@ const liveSessionFeature = createSessionFeature({
   },
   liveContainer: typeof document !== "undefined" ? document.querySelector("#live-session-container") : null,
   wizardModal: typeof document !== "undefined" ? (document.querySelector("#session-wizard-modal") || document.querySelector("#session-modal")) : null,
+});
+const workoutRecapFeature = createWorkoutRecapFeature({
+  getClient: () => supabaseClient,
+  getUserId: () => activeUserId,
+  container: document.querySelector("#workout-recap-container"),
+  tokenSource: signedInView,
+  onDone: (origin) => {
+    // A recap opened from Session History has its own history entry; going back restores the list.
+    if (origin === RECAP_ORIGIN.HISTORY && window.history.state?.workoutRecap) window.history.back();
+    else showPage(origin === RECAP_ORIGIN.HISTORY ? "session-history" : "home");
+  },
 });
 initializePullToRefresh();
 const bodyWeightFeature = createBodyWeightFeature({
@@ -416,6 +433,7 @@ function showSignedOut() {
   presetOrderSettingsFeature.reset();
   bodyWeightFeature.reset();
   liveSessionFeature.reset();
+  workoutRecapFeature.reset();
   const documentId = new URLSearchParams(window.location.search).get("literature");
   if (documentId && LITERATURE_DOCUMENTS[documentId]) {
     void openPublicLiteratureDocument(documentId, false);
@@ -585,6 +603,27 @@ function showPage(pageName, { updateHistory = true } = {}) {
   if (pageName === "settings" && activeUserId && supabaseClient) {
     void bodyWeightFeature.loadSummary();
   }
+}
+
+// The recap is shown only after a successful conclusion. It is not URL-backed, so the
+// finished live-session entry is replaced with Home and a reload never reopens the workout.
+function showWorkoutRecap(sessionId) {
+  synchronizeSignedInPageUrl("home", { replace: true });
+  showPage("workout-recap", { updateHistory: false });
+  void workoutRecapFeature.show(sessionId);
+}
+
+// Session History keeps its URL; the recap gets its own history entry so Back returns to the list
+// at the same scroll position. The recap is recalculated from stored rows, never saved as a record.
+function showWorkoutRecapFromHistory(sessionId) {
+  const historyScrollY = window.scrollY;
+  window.history.pushState({ page: "session-history", workoutRecap: sessionId }, "", window.location.href);
+  window.addEventListener("popstate", () => {
+    if (activePageName !== "session-history") return;
+    window.requestAnimationFrame(() => window.scrollTo({ top: historyScrollY }));
+  }, { once: true });
+  showPage("workout-recap", { updateHistory: false });
+  void workoutRecapFeature.show(sessionId, { origin: RECAP_ORIGIN.HISTORY });
 }
 
 function updateContextualNavTitle() {
@@ -1257,11 +1296,24 @@ function appendSessionRows(rows) {
     disclosure.append(summary);
     if (session.status === "completed") disclosure.append(createSessionLifecycleActions(session, item));
     disclosure.append(exerciseList);
+    if (session.status === "completed") disclosure.append(createSessionRecapAction(session));
     item.append(disclosure);
     fragment.append(item);
   }
 
   liftList.append(fragment);
+}
+
+function createSessionRecapAction(session) {
+  const actions = document.createElement("div");
+  actions.className = "session-recap-action";
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "secondary-button compact session-recap-button";
+  button.textContent = "View recap";
+  button.addEventListener("click", () => showWorkoutRecapFromHistory(session.id));
+  actions.append(button);
+  return actions;
 }
 
 function createSessionLifecycleActions(session, item) {

@@ -338,7 +338,8 @@ test("Session History exposes delete and reopen only for completed sessions, wit
   assert.match(app, /deleteSessionDescription\.textContent = description/);
   assert.match(app, /await deleteCompletedWorkoutSession\(supabaseClient, session\.id\)/);
   assert.match(app, /showPage\(restoredCompletedSession \? "session-history" : "home"\)/);
-  assert.match(app, /showPage\(wasHistoryCorrection \? "session-history" : "home"\)/);
+  // A saved correction returns to Session History; a normal conclusion opens the post-workout recap (#77).
+  assert.match(app, /if \(wasHistoryCorrection\) \{[\s\S]*?resetSessionResults\(\);\s*showPage\("session-history"\);\s*\} else \{\s*showWorkoutRecap\(concludedSessionId\);/);
   // The quick per-exercise correction remains available.
   assert.match(app, /showExerciseEditor\(item, exercise, performedOn\)/);
 

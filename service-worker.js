@@ -1,4 +1,4 @@
-const CACHE_NAME = "heracles-v49";
+const CACHE_NAME = "heracles-v50";
 const APP_SHELL = [
   "/",
   "/index.html",
@@ -27,6 +27,9 @@ const APP_SHELL = [
   "/features/session/session-controller.js",
   "/features/session/preset-order-inputs.js",
   "/features/session/history-correction.js",
+  "/features/workout-recap.js",
+  "/features/workout-recap-card.js",
+  "/workout-recap.js",
   "/features/session/session-lifecycle.js",
   "/relative-e1rm.js",
   "/set-model.js",
