@@ -94,3 +94,10 @@ export function calculateRirE1rmEstimates(set) {
   if ([observedBrzycki, observedEpley, adjustedBrzycki, adjustedEpley].some((value) => value === null)) return null;
   return { observedBrzycki, observedEpley, adjustedBrzycki, adjustedEpley };
 }
+
+// Dumbbell loads are always entered and displayed per dumbbell. The recorded equipment decides this;
+// exercise names that still state the implement (older records, static examples) are honoured too.
+export function usesPerDumbbellLoad({ equipmentName = null, exerciseName = null } = {}) {
+  if (typeof equipmentName === "string" && equipmentName.trim().toLowerCase() === "dumbbell") return true;
+  return /\(Dumbbells?\)/i.test(exerciseName ?? "");
+}

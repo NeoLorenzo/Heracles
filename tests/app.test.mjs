@@ -49,7 +49,7 @@ test("ships a crawlable public science and product overview", async () => {
   assert.match(html, /id="how-it-works"/);
   assert.match(html, /id="principles"/);
   assert.match(html, /id="literature"/);
-  assert.match(html, /138[\s\S]*catalogued exercises/);
+  assert.match(html, /116[\s\S]*catalogued exercises/);
   assert.match(html, /40[\s\S]*detailed muscle entities/);
   assert.match(html, /thirteen broader groups keep the interface readable/);
   assert.match(html, /application\/ld\+json/);
@@ -461,8 +461,9 @@ test("defines and applies one per-dumbbell weight convention", async () => {
   const publicHome = html.slice(html.indexOf('<div id="public-home">'), html.indexOf('<section id="signed-in"'));
   assert.match(publicHome, /kg per dumbbell/);
   assert.doesNotMatch(publicHome, /pair of dumbbells|dumbbells? × 2|combined dumbbell/i);
-  assert.match(app, /\? "kg per dumbbell" : "kg"/);
-  assert.match(app, /formatWeightUnit\(exercise\.exercises\.name\)/);
+  // The recorded canonical equipment decides the per-dumbbell unit now that exercise names omit equipment.
+  assert.match(app, /formatWeightUnit\(exercise\.exercises\.name, equipmentName\)/);
+  assert.match(app, /usesPerDumbbellLoad\(\{ equipmentName, exerciseName \}\) \? "kg per dumbbell" : "kg"/);
   assert.match(designRules, /Dumbbell weight is always per dumbbell/);
   assert.match(designRules, /never infer or display the combined weight/i);
   assert.match(readme, /stored value is always the weight of \*\*one dumbbell\*\*/);
@@ -573,7 +574,9 @@ test("searches session history by exercise and edits owned exercise sets", async
   assert.match(app, /showExerciseEditor\(item, exercise, performedOn\)/);
   assert.match(app, /import \{ persistSessionHistoryExerciseCorrection \} from "\.\/features\/session\/history-correction\.js"/);
   assert.match(app, /const savedCorrection = await persistSessionHistoryExerciseCorrection\(/);
-  assert.match(app, /exercise\.equipment_id = savedCorrection\.equipment_id/);
+  assert.match(app, /exercise\.canonical_equipment_id = savedCorrection\.canonical_equipment_id/);
+  assert.match(app, /equipmentInput\.name = "canonical_equipment_id"/);
+  assert.doesNotMatch(app, /textContent = "Equipment ID"/, "Session History no longer edits the legacy free-text equipment field");
   assert.match(app, /\.eq\("owner_id", requestedUserId\)/);
   assert.match(app, /estimated_1rm_brzycki_rir_adjusted, estimated_1rm_epley_rir_adjusted/);
   assert.match(oneRepMaxMigration, /generated always as/);

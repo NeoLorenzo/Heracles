@@ -280,7 +280,7 @@ function createHistoryQueryClient(getSessions, queryLog) {
           const session = getSessions()
             .filter((row) => filters.every(({ op, column, value }) => {
               if (column === "session_exercises.exercise_id") return row.session_exercises.some((ex) => ex.exercise_id === value);
-              if (column === "session_exercises.gym_equipment_id") return row.session_exercises.some((ex) => ex.gym_equipment_id === value);
+              if (column === "session_exercises.canonical_equipment_id") return row.session_exercises.some((ex) => ex.canonical_equipment_id === value);
               return op === "eq" ? row[column] === value : row[column] !== value;
             }))
             .sort((left, right) => orders.reduce((difference, { column, options }) => {
@@ -309,7 +309,7 @@ function completedHistorySession({ id, performed_on, created_at, equipmentId = 7
       id: id * 10,
       exercise_id: 5,
       exercise_order: 1,
-      gym_equipment_id: equipmentId,
+      canonical_equipment_id: equipmentId,
       exercise_sets: [{ id: id * 100, set_number: 1, weight: setWeight, reps: 8, is_warmup: false, reported_rir_bucket: 2 }],
     }],
   };
@@ -369,16 +369,16 @@ test("ISSUE 12 REGRESSION: equipment-filtered history chooses the matching machi
 
   assert.deepEqual({ sessionId: machineSeven.sessionId, performed_on: machineSeven.performed_on, weight: machineSeven.sets[0].weight }, { sessionId: 2, performed_on: "2026-08-22", weight: 90 });
   assert.equal(noEquipmentFilter.sessionId, 3, "No equipment ID retains the existing unrestricted matching behavior");
-  const equipmentQuery = queryLog.find(({ type, filters }) => type === "query" && filters.some((filter) => filter.column === "session_exercises.gym_equipment_id"));
+  const equipmentQuery = queryLog.find(({ type, filters }) => type === "query" && filters.some((filter) => filter.column === "session_exercises.canonical_equipment_id"));
   assert.ok(equipmentQuery, "Requested equipment is filtered through the matching session exercise");
 });
 
 test("ISSUE 12 REGRESSION: selected session uses its highest-order matching exercise and completed sets only", async () => {
   const session = completedHistorySession({
     id: 4, performed_on: "2026-08-22", created_at: "2026-08-22T10:00:00Z", exerciseRows: [
-      { id: 40, exercise_id: 5, exercise_order: 1, gym_equipment_id: 7, exercise_sets: [{ id: 402, set_number: 2, weight: 80, reps: 8, is_warmup: false, reported_rir_bucket: 2 }] },
-      { id: 41, exercise_id: 5, exercise_order: 2, gym_equipment_id: 7, exercise_sets: [{ id: 411, set_number: 2, weight: 95, reps: 6, is_warmup: false, reported_rir_bucket: 1 }, { id: 410, set_number: 1, weight: null, reps: null, is_warmup: false, reported_rir_bucket: null }] },
-      { id: 42, exercise_id: 5, exercise_order: 2, gym_equipment_id: 7, exercise_sets: [{ id: 421, set_number: 1, weight: 100, reps: 5, is_warmup: false, reported_rir_bucket: 1 }] },
+      { id: 40, exercise_id: 5, exercise_order: 1, canonical_equipment_id: 7, exercise_sets: [{ id: 402, set_number: 2, weight: 80, reps: 8, is_warmup: false, reported_rir_bucket: 2 }] },
+      { id: 41, exercise_id: 5, exercise_order: 2, canonical_equipment_id: 7, exercise_sets: [{ id: 411, set_number: 2, weight: 95, reps: 6, is_warmup: false, reported_rir_bucket: 1 }, { id: 410, set_number: 1, weight: null, reps: null, is_warmup: false, reported_rir_bucket: null }] },
+      { id: 42, exercise_id: 5, exercise_order: 2, canonical_equipment_id: 7, exercise_sets: [{ id: 421, set_number: 1, weight: 100, reps: 5, is_warmup: false, reported_rir_bucket: 1 }] },
     ],
   });
   const history = createSessionHistoryContext({ getClient: () => createHistoryQueryClient(() => [session], []), getUserId: () => "user-test" });
@@ -405,8 +405,8 @@ function issue12ControllerFixture({ concludeError = null } = {}) {
         },
         then(resolve) {
           if (table === "gyms") return resolve({ data: [{ id: 10, name: "Gym A" }], error: null });
-          if (table === "gym_equipment") return resolve({ data: [], error: null });
-          if (table === "session_exercises") return resolve({ data: [{ id: 101, session_id: 999, exercise_id: 5, exercise_order: 1, gym_equipment_id: 7, exercise_sets: [{ id: 201, set_number: 1, weight: 80, reps: 8, is_warmup: false, reported_rir_bucket: 2 }] }], error: null });
+          if (table === "equipment") return resolve({ data: [], error: null });
+          if (table === "session_exercises") return resolve({ data: [{ id: 101, session_id: 999, exercise_id: 5, exercise_order: 1, canonical_equipment_id: 7, exercise_sets: [{ id: 201, set_number: 1, weight: 80, reps: 8, is_warmup: false, reported_rir_bucket: 2 }] }], error: null });
           return resolve({ data: [], error: null });
         },
       };
@@ -740,8 +740,8 @@ test("BUG 4 REGRESSION: equipment options list is exercise-specific", () => {
   const state = {
     session: { id: 1, gym_id: 100, performed_on: "2026-08-24" },
     exercises: [
-      { id: 501, exercise_id: 1, exercise_order: 1, gym_equipment_id: 10, exercises: { name: "Chest Press" }, exercise_sets: [] },
-      { id: 502, exercise_id: 2, exercise_order: 2, gym_equipment_id: 30, exercises: { name: "Leg Extension" }, exercise_sets: [] },
+      { id: 501, exercise_id: 1, exercise_order: 1, canonical_equipment_id: 10, exercises: { name: "Chest Press" }, exercise_sets: [] },
+      { id: 502, exercise_id: 2, exercise_order: 2, canonical_equipment_id: 30, exercises: { name: "Leg Extension" }, exercise_sets: [] },
     ],
     gyms: [{ id: 100, name: "Sussex Gym" }],
     equipmentByGym,
@@ -788,7 +788,7 @@ test("BUG 5 REGRESSION: cancel active workout aborts autosave, clears pending st
         if (table === "gyms") {
           return Promise.resolve({ data: [{ id: 10, name: "Gym A" }], error: null });
         }
-        if (table === "gym_equipment") {
+        if (table === "equipment") {
           return Promise.resolve({ data: [], error: null });
         }
         if (table === "session_exercises") {
@@ -872,7 +872,7 @@ test("BUG 5 REGRESSION: cancellation failure preserves pending local mutations a
         if (table === "gyms") {
           return Promise.resolve({ data: [{ id: 10, name: "Gym A" }], error: null });
         }
-        if (table === "gym_equipment") {
+        if (table === "equipment") {
           return Promise.resolve({ data: [], error: null });
         }
         if (table === "session_exercises") {
@@ -1169,7 +1169,7 @@ test("ISSUE 1 REGRESSION: failed autosave prevents session conclusion, keeps pen
       single() { return Promise.resolve({ data: null, error: null }); },
       then(resolve) {
         if (table === "gyms") return resolve({ data: [{ id: 10, name: "Gym A" }], error: null });
-        if (table === "gym_equipment") return resolve({ data: [], error: null });
+        if (table === "equipment") return resolve({ data: [], error: null });
         if (table === "session_exercises") {
           return resolve({
             data: [
@@ -1178,7 +1178,7 @@ test("ISSUE 1 REGRESSION: failed autosave prevents session conclusion, keeps pen
                 session_id: 999,
                 exercise_order: 1,
                 exercise_id: 1,
-                gym_equipment_id: null,
+                canonical_equipment_id: null,
                 exercises: { id: 1, name: "Bench Press" },
                 workout_sessions: { id: 999, performed_on: "2026-08-27" },
                 exercise_sets: [
@@ -1271,7 +1271,7 @@ test("ISSUE 1 REGRESSION: successful flush allows session conclusion, calls conc
       single() { return Promise.resolve({ data: null, error: null }); },
       then(resolve) {
         if (table === "gyms") return resolve({ data: [{ id: 10, name: "Gym A" }], error: null });
-        if (table === "gym_equipment") return resolve({ data: [], error: null });
+        if (table === "equipment") return resolve({ data: [], error: null });
         if (table === "session_exercises") {
           return resolve({
             data: [
@@ -1280,7 +1280,7 @@ test("ISSUE 1 REGRESSION: successful flush allows session conclusion, calls conc
                 session_id: 999,
                 exercise_order: 1,
                 exercise_id: 1,
-                gym_equipment_id: null,
+                canonical_equipment_id: null,
                 exercises: { id: 1, name: "Bench Press" },
                 workout_sessions: { id: 999, performed_on: "2026-08-27" },
                 exercise_sets: [
@@ -1725,7 +1725,7 @@ test("ISSUE 3 REGRESSION: addExerciseToActiveSession calls atomic add_session_ex
       single() { return Promise.resolve({ data: null, error: null }); },
       then(resolve) {
         if (table === "gyms") return resolve({ data: [{ id: 10, name: "Gym A" }], error: null });
-        if (table === "gym_equipment") return resolve({ data: [], error: null });
+        if (table === "equipment") return resolve({ data: [], error: null });
         if (table === "session_exercises") {
           return resolve({
             data: [
@@ -1734,7 +1734,7 @@ test("ISSUE 3 REGRESSION: addExerciseToActiveSession calls atomic add_session_ex
                 session_id: 999,
                 exercise_order: 1,
                 exercise_id: 5,
-                gym_equipment_id: null,
+                canonical_equipment_id: null,
                 exercises: { id: 5, name: "Incline Press" },
                 workout_sessions: { id: 999, performed_on: "2026-08-27" },
                 exercise_sets: [
@@ -1780,7 +1780,7 @@ test("ISSUE 3 REGRESSION: addExerciseToActiveSession calls atomic add_session_ex
   assert.deepEqual(addCall.params, {
     p_session_id: 999,
     p_exercise_id: 5,
-    p_gym_equipment_id: null,
+    p_equipment_id: null,
   });
 });
 
@@ -1821,7 +1821,7 @@ test("ISSUE 3 REGRESSION: removeExercise calls remove_session_exercise RPC; pres
       single() { return Promise.resolve({ data: null, error: null }); },
       then(resolve) {
         if (table === "gyms") return resolve({ data: [{ id: 10, name: "Gym A" }], error: null });
-        if (table === "gym_equipment") return resolve({ data: [], error: null });
+        if (table === "equipment") return resolve({ data: [], error: null });
         if (table === "session_exercises") {
           return resolve({
             data: [
@@ -1830,7 +1830,7 @@ test("ISSUE 3 REGRESSION: removeExercise calls remove_session_exercise RPC; pres
                 session_id: 999,
                 exercise_order: 1,
                 exercise_id: 5,
-                gym_equipment_id: null,
+                canonical_equipment_id: null,
                 exercises: { id: 5, name: "Incline Press" },
                 workout_sessions: { id: 999, performed_on: "2026-08-27" },
                 exercise_sets: [
@@ -1917,7 +1917,7 @@ test("ISSUE 3 REGRESSION: removeSet calls remove_exercise_set RPC; preserves pen
       single() { return Promise.resolve({ data: null, error: null }); },
       then(resolve) {
         if (table === "gyms") return resolve({ data: [{ id: 10, name: "Gym A" }], error: null });
-        if (table === "gym_equipment") return resolve({ data: [], error: null });
+        if (table === "equipment") return resolve({ data: [], error: null });
         if (table === "session_exercises") {
           return resolve({
             data: [
@@ -1926,7 +1926,7 @@ test("ISSUE 3 REGRESSION: removeSet calls remove_exercise_set RPC; preserves pen
                 session_id: 999,
                 exercise_order: 1,
                 exercise_id: 5,
-                gym_equipment_id: null,
+                canonical_equipment_id: null,
                 exercises: { id: 5, name: "Incline Press" },
                 workout_sessions: { id: 999, performed_on: "2026-08-27" },
                 exercise_sets: [
@@ -2016,7 +2016,7 @@ test("ISSUE 1 REGRESSION: starting concludeActiveSession() locks out concurrent 
       single() { return Promise.resolve({ data: null, error: null }); },
       then(resolve) {
         if (table === "gyms") return resolve({ data: [{ id: 10, name: "Gym A" }], error: null });
-        if (table === "gym_equipment") return resolve({ data: [], error: null });
+        if (table === "equipment") return resolve({ data: [], error: null });
         if (table === "session_exercises") {
           return resolve({
             data: [
@@ -2025,7 +2025,7 @@ test("ISSUE 1 REGRESSION: starting concludeActiveSession() locks out concurrent 
                 session_id: 999,
                 exercise_order: 1,
                 exercise_id: 1,
-                gym_equipment_id: null,
+                canonical_equipment_id: null,
                 exercises: { id: 1, name: "Bench Press" },
                 workout_sessions: { id: 999, performed_on: "2026-08-27" },
                 exercise_sets: [
@@ -2133,7 +2133,7 @@ test("ISSUE 3 REGRESSION: structural deletion of set while autosave is in flight
       single() { return Promise.resolve({ data: null, error: null }); },
       then(resolve) {
         if (table === "gyms") return resolve({ data: [{ id: 10, name: "Gym A" }], error: null });
-        if (table === "gym_equipment") return resolve({ data: [], error: null });
+        if (table === "equipment") return resolve({ data: [], error: null });
         if (table === "session_exercises") {
           return resolve({
             data: [
@@ -2142,7 +2142,7 @@ test("ISSUE 3 REGRESSION: structural deletion of set while autosave is in flight
                 session_id: 999,
                 exercise_order: 1,
                 exercise_id: 1,
-                gym_equipment_id: null,
+                canonical_equipment_id: null,
                 exercises: { id: 1, name: "Bench Press" },
                 workout_sessions: { id: 999, performed_on: "2026-08-27" },
                 exercise_sets: [
@@ -2243,7 +2243,7 @@ test("ISSUE 3 REGRESSION: structural deletion of exercise with in-flight set aut
       single() { return Promise.resolve({ data: null, error: null }); },
       then(resolve) {
         if (table === "gyms") return resolve({ data: [{ id: 10, name: "Gym A" }], error: null });
-        if (table === "gym_equipment") return resolve({ data: [], error: null });
+        if (table === "equipment") return resolve({ data: [], error: null });
         if (table === "session_exercises") {
           return resolve({
             data: [
@@ -2252,7 +2252,7 @@ test("ISSUE 3 REGRESSION: structural deletion of exercise with in-flight set aut
                 session_id: 999,
                 exercise_order: 1,
                 exercise_id: 1,
-                gym_equipment_id: null,
+                canonical_equipment_id: null,
                 exercises: { id: 1, name: "Bench Press" },
                 workout_sessions: { id: 999, performed_on: "2026-08-27" },
                 exercise_sets: [
@@ -2310,4 +2310,45 @@ test("ISSUE 3 REGRESSION: structural deletion of exercise with in-flight set aut
   // 4. Verify clean storage and SAVED state
   assert.equal(mockStorage.getPendingSetEdits(999).length, 0, "No pending edits recreated for deleted exercise sets");
   assert.equal(autosave.getSyncState(), SYNC_STATE.SAVED, "Sync state remains SAVED");
+});
+
+test("ISSUE 22: canonical equipment matches previous performance across gyms; unrecorded equipment stays gym-scoped", async () => {
+  const otherGymSession = { ...completedHistorySession({ id: 6, performed_on: "2026-08-25", created_at: "2026-08-25T09:00:00Z", setWeight: 22 }), gym_id: 11 };
+  const queryLog = [];
+  const history = createSessionHistoryContext({ getClient: () => createHistoryQueryClient(() => [otherGymSession], queryLog), getUserId: () => "user-test" });
+
+  const sameEquipmentElsewhere = await history.fetchPreviousPerformance(10, 5, 7, 99);
+  assert.equal(sameEquipmentElsewhere.sessionId, 6, "the same canonical equipment at another gym is the previous performance");
+  assert.equal(sameEquipmentElsewhere.equipmentId, 7);
+  const equipmentQuery = queryLog.filter(({ type }) => type === "query")[0];
+  assert.equal(equipmentQuery.filters.some(({ column }) => column === "gym_id"), false, "equipment lookups are not scoped to the gym");
+  assert.ok(equipmentQuery.filters.some(({ column, value }) => column === "session_exercises.canonical_equipment_id" && value === 7));
+
+  const unrecorded = await history.fetchPreviousPerformance(10, 5, null, 98);
+  assert.equal(unrecorded, null, "without equipment the lookup stays at the current gym");
+  const gymQuery = queryLog.filter(({ type }) => type === "query")[1];
+  assert.ok(gymQuery.filters.some(({ column, value }) => column === "gym_id" && value === 10));
+});
+
+test("ISSUE 22: generic implements are offered at every gym and machines only where available", async () => {
+  const { buildEquipmentByGym } = await import("../features/session/session-controller.js");
+  const byGym = buildEquipmentByGym(
+    [{ id: 1, name: "Gym One" }, { id: 2, name: "Gym Two" }],
+    [
+      { id: 7, name: "Dumbbell", kind: "generic", is_active: true, equipment_gym_availability: [] },
+      { id: 8, name: "Matrix G3-S71", kind: "machine", is_active: true, equipment_gym_availability: [{ gym_id: 1 }, { gym_id: 2 }] },
+      { id: 9, name: "Smith Machine (unknown model) — Gym One", kind: "unknown_model", is_active: true, equipment_gym_availability: [{ gym_id: 1 }] },
+      { id: 10, name: "Retired Machine", kind: "machine", is_active: false, equipment_gym_availability: [{ gym_id: 2 }] },
+    ],
+  );
+  assert.deepEqual(byGym.get(1).map(({ name }) => name), ["Dumbbell", "Matrix G3-S71", "Smith Machine (unknown model) — Gym One"]);
+  assert.deepEqual(byGym.get(2).map(({ name }) => name), ["Dumbbell", "Matrix G3-S71"]);
+  assert.equal(byGym.get(1)[0].id, byGym.get(2)[0].id, "the generic implement keeps one identity at both gyms");
+});
+
+test("ISSUE 22: previous-set text labels dumbbell loads per dumbbell from the recorded equipment", async () => {
+  const { formatInlinePreviousSet } = await import("../features/session/session-history-context.js");
+  const previous = { weight: 14, reps: 12, reported_rir_bucket: 1, is_warmup: false };
+  assert.equal(formatInlinePreviousSet(previous, "Lateral Raise (Seated)", "Dumbbell"), "14 kg per dumbbell × 12 @ 1 RIR");
+  assert.equal(formatInlinePreviousSet(previous, "Lateral Raise (Seated)", "Cable (unknown model) — Gym One"), "14 kg × 12 @ 1 RIR");
 });

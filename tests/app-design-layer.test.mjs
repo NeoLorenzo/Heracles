@@ -63,7 +63,7 @@ test("session history renders sets as a table whose load header carries the per-
   const app = await read("app.js");
   assert.match(app, /sets\.className = "set-table"/);
   assert.match(app, /\["set-load", "Load", weightUnit\]/);
-  assert.match(app, /const weightUnit = formatWeightUnit\(exercise\.exercises\.name\)/);
+  assert.match(app, /const weightUnit = formatWeightUnit\(exercise\.exercises\.name, equipmentName\)/);
   assert.match(app, /formatSetClassification\(set\)/);
 });
 

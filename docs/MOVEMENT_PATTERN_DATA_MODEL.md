@@ -179,4 +179,4 @@ The schema and initial data import are complete. The following product and scien
 3. Define an administrative draft-review-publish workflow for future matrix versions and new global exercises.
 4. Add any true historical exercise aliases that should resolve during future imports; the initial alias table currently contains canonical names only.
 5. Integrate movement-pattern explanations and weighted-set calculations into the app, while keeping effort, RPE/RIR, load, repetitions, user-specific ROM, and hypertrophy modelling as separate downstream dimensions.
-6. Decide how future exercise variants should be represented when equipment or execution changes biomechanics materially. Equipment IDs should remain performance data rather than being attached to every exercise definition by default.
+6. Decide how future exercise variants should be represented when execution changes biomechanics materially. Issue #22 settled the equipment side: canonical equipment is recorded on each performed exercise and exercise definitions no longer encode it; merged definitions use one documented scoring source each.

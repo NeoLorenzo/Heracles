@@ -82,3 +82,14 @@ test("zero RIR keeps observed and adjusted formula identities coincident", () =>
 test("4+ RIR cannot produce a finite progression estimate", () => {
   assert.equal(calculateRirE1rmEstimates({ is_warmup: false, reported_rir_bucket: 4, weight: 100, reps: 8 }), null);
 });
+
+test("ISSUE 22: the recorded equipment decides per-dumbbell loads once names omit equipment", async () => {
+  const { usesPerDumbbellLoad } = await import("../set-model.js");
+  assert.equal(usesPerDumbbellLoad({ equipmentName: "Dumbbell", exerciseName: "Lateral Raise (Seated)" }), true);
+  assert.equal(usesPerDumbbellLoad({ equipmentName: " dumbbell ", exerciseName: "Chest Press (Incline 30)" }), true);
+  assert.equal(usesPerDumbbellLoad({ equipmentName: "Barbell", exerciseName: "Chest Press (Incline 30)" }), false);
+  assert.equal(usesPerDumbbellLoad({ equipmentName: "Machine (unknown model) — Gym One", exerciseName: "Leg Extension" }), false);
+  assert.equal(usesPerDumbbellLoad({ equipmentName: null, exerciseName: "Lateral Raise (Seated)" }), false);
+  assert.equal(usesPerDumbbellLoad({ equipmentName: null, exerciseName: "Lateral Raise (Dumbbell) (Seated)" }), true, "older names that state the implement are honoured");
+  assert.equal(usesPerDumbbellLoad({ equipmentName: null, exerciseName: "Split Squats (Dumbbells)" }), true);
+});

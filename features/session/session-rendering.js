@@ -3,7 +3,7 @@ import {
   formatPreviousSetBadge,
   formatInlinePreviousSet,
 } from "./session-history-context.js";
-import { isCompletedSet } from "../../set-model.js";
+import { isCompletedSet, usesPerDumbbellLoad } from "../../set-model.js";
 
 export function parseWorkoutWeightInput(rawValue) {
   const value = String(rawValue ?? "").trim();
@@ -28,8 +28,8 @@ function formatDateLong(isoDate) {
   return new Intl.DateTimeFormat(undefined, { dateStyle: "long" }).format(new Date(year, month - 1, day));
 }
 
-function formatWeightUnit(exerciseName) {
-  return /\(Dumbbell\)/i.test(exerciseName ?? "") ? "kg per dumbbell" : "kg";
+function formatWeightUnit(exerciseName, equipmentName = null) {
+  return usesPerDumbbellLoad({ equipmentName, exerciseName }) ? "kg per dumbbell" : "kg";
 }
 
 function createRirSelect(sessionId, set, onSetFieldChange, onSetFieldBlur) {
@@ -416,6 +416,7 @@ export function createSessionRenderer(options) {
           exerciseCard.append(cardHeader);
 
           // Equipment Selector
+          const currentEquipmentName = exercise.equipment?.name || exercise.equipment_name_snapshot || null;
           const equipmentRow = document.createElement("div");
           equipmentRow.className = "live-equipment-picker-row";
 
@@ -446,7 +447,7 @@ export function createSessionRenderer(options) {
               const option = document.createElement("option");
               option.value = String(eq.id);
               option.textContent = eq.name;
-              if (String(exercise.gym_equipment_id) === String(eq.id)) {
+              if (String(exercise.canonical_equipment_id) === String(eq.id)) {
                 option.selected = true;
               }
               optGroupHistorical.append(option);
@@ -456,12 +457,12 @@ export function createSessionRenderer(options) {
 
           if (otherGymEquip.length > 0) {
             const optGroupOther = document.createElement("optgroup");
-            optGroupOther.label = historicalEquipList.length > 0 ? "Other machines at this gym" : "Machines at this gym";
+            optGroupOther.label = historicalEquipList.length > 0 ? "Other equipment at this gym" : "Equipment at this gym";
             for (const eq of otherGymEquip) {
               const option = document.createElement("option");
               option.value = String(eq.id);
               option.textContent = eq.name;
-              if (String(exercise.gym_equipment_id) === String(eq.id)) {
+              if (String(exercise.canonical_equipment_id) === String(eq.id)) {
                 option.selected = true;
               }
               optGroupOther.append(option);
@@ -470,13 +471,13 @@ export function createSessionRenderer(options) {
           }
 
           if (
-            exercise.gym_equipment_id &&
-            !historicalIds.has(String(exercise.gym_equipment_id)) &&
-            !otherGymEquip.some((eq) => String(eq.id) === String(exercise.gym_equipment_id))
+            exercise.canonical_equipment_id &&
+            !historicalIds.has(String(exercise.canonical_equipment_id)) &&
+            !otherGymEquip.some((eq) => String(eq.id) === String(exercise.canonical_equipment_id))
           ) {
             const option = document.createElement("option");
-            option.value = String(exercise.gym_equipment_id);
-            option.textContent = exercise.equipment_name_snapshot || "Current machine";
+            option.value = String(exercise.canonical_equipment_id);
+            option.textContent = exercise.equipment?.name || exercise.equipment_name_snapshot || "Current machine";
             option.selected = true;
             equipmentSelect.append(option);
           }
@@ -488,11 +489,11 @@ export function createSessionRenderer(options) {
 
           equipmentSelect.addEventListener("change", (e) => {
             if (e.target.value === "__ADD_NEW__") {
-              const newName = window.prompt("Enter new machine or equipment name for this gym:");
+              const newName = window.prompt("Enter the machine model or equipment name (an existing name is reused):");
               if (newName && newName.trim()) {
                 onCreateEquipment(exercise.id, session.gym_id, newName.trim());
               } else {
-                equipmentSelect.value = exercise.gym_equipment_id ? String(exercise.gym_equipment_id) : "";
+                equipmentSelect.value = exercise.canonical_equipment_id ? String(exercise.canonical_equipment_id) : "";
               }
             } else {
               const selectedId = e.target.value ? Number(e.target.value) : null;
@@ -506,7 +507,7 @@ export function createSessionRenderer(options) {
 
           // Collapsible Previous Performance Summary
           const historyInfo = historyContextByExercise.get(exercise.id);
-          const historySummary = formatPreviousPerformanceSummary(historyInfo, exerciseHeading.textContent);
+          const historySummary = formatPreviousPerformanceSummary(historyInfo, exerciseHeading.textContent, currentEquipmentName);
 
           const historyCard = document.createElement("div");
           historyCard.className = `live-history-callout ${historySummary.hasHistory ? "has-history" : "no-history"}`;
@@ -617,7 +618,7 @@ export function createSessionRenderer(options) {
 
             const weightLabel = document.createElement("label");
             weightLabel.className = "live-field-label";
-            weightLabel.textContent = `Weight (${formatWeightUnit(exerciseHeading.textContent)})`;
+            weightLabel.textContent = `Weight (${formatWeightUnit(exerciseHeading.textContent, currentEquipmentName)})`;
 
             const weightInput = document.createElement("input");
             weightInput.type = "text";
@@ -725,7 +726,7 @@ export function createSessionRenderer(options) {
 
             // Inline previous performance display
             const prevSet = historyInfo?.sets?.[setIdx] || null;
-            const inlinePrevText = formatInlinePreviousSet(prevSet, exerciseHeading.textContent);
+            const inlinePrevText = formatInlinePreviousSet(prevSet, exerciseHeading.textContent, currentEquipmentName);
 
             const prevRow = document.createElement("div");
             prevRow.className = `live-set-previous cell-prev col-prev ${inlinePrevText ? "has-previous" : "no-previous"}`;

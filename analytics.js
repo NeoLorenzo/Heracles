@@ -92,8 +92,9 @@ export function joinDashboardData(sessions, exercises, sets) {
       performed_on: session.performed_on,
       exercise_id: exercise.exercise_id,
       exercise_name: exercise.exercises?.name ?? exercise.exercise_name,
-      equipment_id: exercise.gym_equipment_id ?? exercise.equipment_id ?? null,
-      equipment_name: exercise.equipment_name_snapshot ?? exercise.equipment_id ?? null,
+      // Progression identity is the canonical equipment (issue #22); the current canonical name labels the series.
+      equipment_id: exercise.canonical_equipment_id ?? exercise.gym_equipment_id ?? exercise.equipment_id ?? null,
+      equipment_name: exercise.equipment?.name ?? exercise.equipment_name_snapshot ?? exercise.equipment_id ?? null,
     }];
   });
 }

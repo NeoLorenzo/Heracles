@@ -45,7 +45,7 @@ This rule applies without exception to:
 
 For example, a bilateral dumbbell press performed with two 30 kg dumbbells is recorded as `30 kg`, not `60 kg`. A unilateral curl with one 15 kg dumbbell is recorded as `15 kg`.
 
-The app must label dumbbell performance as `kg per dumbbell` wherever weight or a weight-derived estimate is displayed. It must never infer or display the combined weight of a dumbbell pair.
+The app must label dumbbell performance as `kg per dumbbell` wherever weight or a weight-derived estimate is displayed. It must never infer or display the combined weight of a dumbbell pair. Exercise names no longer state the implement, so the recorded `Dumbbell` equipment decides the label; when one exercise chart mixes dumbbell and non-dumbbell equipment series, its unit says that dumbbell series are per dumbbell.
 
 ## 4. Color meaning must be consistent and intuitive
 
@@ -73,7 +73,7 @@ Strength progression preserves four calculated values for a representative RIR 0
 
 Live session tracking enables persistent logging during active training:
 
-- **Gym Equipment Provenance & Isolation**: Gym equipment entities (`gym_equipment`) are owner-isolated with database-level composite foreign keys (`ON DELETE RESTRICT`). Historical references are never cascaded or destroyed. When equipment changes or is renamed, `session_exercises` preserves an immutable `equipment_name_snapshot`. Inactive equipment is retired via `is_active = false`.
+- **Canonical Equipment Identity & Isolation**: Equipment (`equipment`) is one owner-scoped identity per real piece of equipment and never includes the gym. Generic implements (Dumbbell, Barbell, EZ Bar, Bodyweight) are offered at every gym; machines and `unknown_model` placeholders are offered where `equipment_gym_availability` lists them. Creating or linking equipment reuses an existing record with the same normalized name. References use database-level composite foreign keys (`ON DELETE RESTRICT`); historical references are never cascaded or destroyed. When equipment changes or is renamed, `session_exercises` preserves an immutable `equipment_name_snapshot`. Inactive equipment is retired via `is_active = false`. The legacy gym-scoped `gym_equipment` rows are kept read-only for history and undo.
 - **Source Preset Provenance**: When starting a session from a preset, `source_preset_id` references the preset with composite foreign keys using `ON DELETE SET NULL (source_preset_id)` and a `source_preset_name` snapshot. Deleting a preset never deletes or nullifies owner isolation on historical workout sessions.
 - **Set State Transitions & Data Integrity**:
   - *Blank Set Slot*: Weight, reps, and RIR are unpopulated. Used for live planning and automatically pruned upon session conclusion.

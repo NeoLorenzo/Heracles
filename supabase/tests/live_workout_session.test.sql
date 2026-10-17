@@ -1,11 +1,12 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select plan(52);
+select plan(54);
 
 select has_table('public', 'gym_equipment', 'gym_equipment table exists');
 select has_column('public', 'session_exercises', 'gym_equipment_id', 'gym_equipment_id column exists on session_exercises');
 select has_column('public', 'session_exercises', 'equipment_name_snapshot', 'equipment_name_snapshot exists on session_exercises');
+select has_column('public', 'session_exercises', 'canonical_equipment_id', 'canonical_equipment_id exists on session_exercises');
 select has_column('public', 'workout_sessions', 'source_preset_id', 'source_preset_id exists on workout_sessions');
 select has_column('public', 'workout_sessions', 'source_preset_name', 'source_preset_name exists on workout_sessions');
 
@@ -17,31 +18,31 @@ values
 set local role authenticated;
 select set_config('request.jwt.claims', '{"sub":"30000000-0000-0000-0000-000000000001","role":"authenticated"}', true);
 
--- Test create_or_get_gym_equipment
+-- Test create_or_get_equipment (canonical, gym-independent identity)
 insert into public.gyms (owner_id, name)
 values ('30000000-0000-0000-0000-000000000001', 'Sussex Gym');
 
 select lives_ok($sql$
-  select public.create_or_get_gym_equipment(
-    (select id from public.gyms where name = 'Sussex Gym'),
-    '  Matrix Incline Press  '
+  select public.create_or_get_equipment(
+    '  Matrix Incline Press  ',
+    (select id from public.gyms where name = 'Sussex Gym')
   );
-$sql$, 'create_or_get_gym_equipment creates a normalized equipment record');
+$sql$, 'create_or_get_equipment creates a normalized equipment record');
 
 select is(
-  (select name from public.gym_equipment where gym_id = (select id from public.gyms where name = 'Sussex Gym')),
+  (select e.name from public.equipment e join public.equipment_gym_availability a on a.equipment_id = e.id where a.gym_id = (select id from public.gyms where name = 'Sussex Gym')),
   'Matrix Incline Press',
-  'equipment name is trimmed and normalized'
+  'equipment name is trimmed and normalized and the machine is available at the gym'
 );
 
--- Idempotency / case-insensitivity of create_or_get_gym_equipment
+-- Idempotency / case-insensitivity of create_or_get_equipment
 select is(
-  (select id from public.create_or_get_gym_equipment(
-    (select id from public.gyms where name = 'Sussex Gym'),
-    'matrix incline press'
+  (select id from public.create_or_get_equipment(
+    'matrix incline press',
+    (select id from public.gyms where name = 'Sussex Gym')
   )),
-  (select id from public.gym_equipment where name = 'Matrix Incline Press'),
-  'create_or_get_gym_equipment returns existing record for case-insensitive match'
+  (select id from public.equipment where name = 'Matrix Incline Press'),
+  'create_or_get_equipment returns existing record for case-insensitive match'
 );
 
 -- Test workout presets & session creation
@@ -58,13 +59,13 @@ $sql$, 'save_workout_preset creates a preset');
 insert into public.workout_sessions (owner_id, gym_id, performed_on, status)
 values ('30000000-0000-0000-0000-000000000001', (select id from public.gyms where name = 'Sussex Gym'), date '2026-08-21', 'completed');
 
-insert into public.session_exercises (owner_id, session_id, exercise_order, exercise_id, gym_equipment_id, equipment_name_snapshot)
+insert into public.session_exercises (owner_id, session_id, exercise_order, exercise_id, canonical_equipment_id, equipment_name_snapshot)
 values (
   '30000000-0000-0000-0000-000000000001',
   (select id from public.workout_sessions where status = 'completed' limit 1),
   1,
   (select id from public.exercises order by id limit 1),
-  (select id from public.gym_equipment where name = 'Matrix Incline Press'),
+  (select id from public.equipment where name = 'Matrix Incline Press'),
   'Matrix Incline Press'
 );
 
@@ -73,10 +74,10 @@ values
   ('30000000-0000-0000-0000-000000000001', (select id from public.session_exercises limit 1), 1, 45, 10, false, 1, 'user_entered'),
   ('30000000-0000-0000-0000-000000000001', (select id from public.session_exercises limit 1), 2, 45, 9, false, 0, 'user_entered');
 
--- Check ON DELETE RESTRICT on referenced gym_equipment
+-- Check ON DELETE RESTRICT on referenced canonical equipment
 select throws_ok($sql$
-  delete from public.gym_equipment where name = 'Matrix Incline Press';
-$sql$, '23503', 'update or delete on table "gym_equipment" violates foreign key constraint "session_exercises_gym_equipment_fk" on table "session_exercises"', 'deleting referenced gym equipment is restricted');
+  delete from public.equipment where name = 'Matrix Incline Press';
+$sql$, '23503', 'update or delete on table "equipment" violates foreign key constraint "session_exercises_canonical_equipment_fk" on table "session_exercises"', 'deleting referenced equipment is restricted');
 
 -- Start new session from preset
 select lives_ok($sql$
@@ -93,8 +94,8 @@ select is(
 );
 
 select is(
-  (select gym_equipment_id from public.session_exercises where session_id = (select id from public.workout_sessions where status = 'in_progress') limit 1),
-  (select id from public.gym_equipment where name = 'Matrix Incline Press'),
+  (select canonical_equipment_id from public.session_exercises where session_id = (select id from public.workout_sessions where status = 'in_progress') limit 1),
+  (select id from public.equipment where name = 'Matrix Incline Press'),
   'default equipment is deterministically resolved from gym history'
 );
 
@@ -207,9 +208,9 @@ set local role authenticated;
 select set_config('request.jwt.claims', '{"sub":"30000000-0000-0000-0000-000000000002","role":"authenticated"}', true);
 
 select is(
-  (select count(*) from public.gym_equipment),
+  (select count(*) from public.equipment),
   0::bigint,
-  'user 2 cannot view user 1 gym equipment'
+  'user 2 cannot view user 1 equipment'
 );
 
 select throws_ok($sql$
@@ -282,8 +283,8 @@ select lives_ok($sql$
 $sql$, 'add_session_exercise creates exercise and initial blank set atomically');
 
 select is(
-  (select gym_equipment_id from public.session_exercises where session_id = (select id from public.workout_sessions where status = 'in_progress' and owner_id = '30000000-0000-0000-0000-000000000001') and exercise_order = 1),
-  (select id from public.gym_equipment where name = 'Matrix Incline Press'),
+  (select canonical_equipment_id from public.session_exercises where session_id = (select id from public.workout_sessions where status = 'in_progress' and owner_id = '30000000-0000-0000-0000-000000000001') and exercise_order = 1),
+  (select id from public.equipment where name = 'Matrix Incline Press'),
   'add_session_exercise resolves default equipment from prior history when omitted'
 );
 
@@ -387,16 +388,17 @@ $sql$, '42501', 'Active session not found or not owned by current user.', 'add_s
 -- Error cases: foreign gym equipment (create gym 2)
 insert into public.gyms (owner_id, name)
 values ('30000000-0000-0000-0000-000000000001', 'Other Gym');
-insert into public.gym_equipment (owner_id, gym_id, name)
-values ('30000000-0000-0000-0000-000000000001', (select id from public.gyms where name = 'Other Gym'), 'Other Machine');
+select lives_ok($sql$
+  select public.create_or_get_equipment('Other Machine', (select id from public.gyms where name = 'Other Gym'));
+$sql$, 'a machine is created at another gym');
 
 select throws_ok($sql$
   select public.add_session_exercise(
     (select id from public.workout_sessions where status = 'in_progress' and owner_id = '30000000-0000-0000-0000-000000000001'),
     (select id from public.exercises order by id limit 1),
-    (select id from public.gym_equipment where name = 'Other Machine')
+    (select id from public.equipment where name = 'Other Machine')
   );
-$sql$, '42501', 'Equipment not found, inactive, or not compatible with session gym.', 'add_session_exercise with foreign gym equipment throws 42501');
+$sql$, '42501', 'Equipment not found, inactive, or not available at the session gym.', 'add_session_exercise with equipment unavailable at the session gym throws 42501');
 
 select throws_ok($sql$
   select public.remove_session_exercise(

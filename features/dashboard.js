@@ -15,7 +15,7 @@ import {
   summarizeTraining,
   workingSets,
 } from "../analytics.js";
-import { calculateRirE1rmEstimates } from "../set-model.js";
+import { calculateRirE1rmEstimates, usesPerDumbbellLoad } from "../set-model.js";
 import { resolveOneRepMaxEstimates } from "../relative-e1rm.js";
 
 const E1RM_MODELS = Object.freeze([
@@ -140,7 +140,7 @@ export function createDashboardFeature(options) {
     try {
       const [sessions, exercises, sets, exerciseMuscleLookup] = await Promise.all([
         fetchOwnedRows(supabase, "workout_sessions", "id, performed_on, status", requestedUserId),
-        fetchOwnedRows(supabase, "session_exercises", "id, session_id, exercise_id, equipment_id, gym_equipment_id, equipment_name_snapshot, exercises(name)", requestedUserId),
+        fetchOwnedRows(supabase, "session_exercises", "id, session_id, exercise_id, equipment_id, gym_equipment_id, canonical_equipment_id, equipment_name_snapshot, equipment(name), exercises(name)", requestedUserId),
         fetchOwnedRows(
           supabase,
           "exercise_sets",
@@ -449,7 +449,7 @@ export function createDashboardFeature(options) {
       seriesLabel.textContent = formatEquipmentLabel(record);
       series.append(swatch, seriesLabel);
       const performance = document.createElement("strong");
-      const load = record.weight === null ? "Load not recorded" : `${formatDecimal(Number(record.weight))} kg`;
+      const load = record.weight === null ? "Load not recorded" : `${formatDecimal(Number(record.weight))} ${formatWeightUnit(record.exercise_name, record.equipment_name)}`;
       const reps = record.reps === null ? "reps not recorded" : `${record.reps} ${record.reps === 1 ? "rep" : "reps"}`;
       performance.textContent = `${load} × ${reps}`;
       const context = document.createElement("span");
@@ -472,9 +472,8 @@ export function createDashboardFeature(options) {
       return;
     }
     const bodyWeightState = getBodyWeightState();
-    const unit = bodyWeightState.effectiveRelativeEnabled
-      ? (/\(Dumbbell\)/i.test(observations[0]?.record.exercise_name ?? "") ? "× BW per dumbbell" : "× BW")
-      : formatWeightUnit(observations[0]?.record.exercise_name ?? "");
+    // One canonical exercise can mix dumbbell and non-dumbbell equipment series; dumbbell loads stay per dumbbell.
+    const unit = formatProgressionUnit(observations.map((item) => item.record), bodyWeightState.effectiveRelativeEnabled);
     const plottedSeries = [...new Set(observations.map((item) => item.seriesKey))].sort();
     const legend = document.createElement("div");
     legend.className = "progression-legend";
@@ -594,7 +593,7 @@ export function createDashboardFeature(options) {
       const tooltipSeries = document.createElement("span");
       tooltipSeries.textContent = formatEquipmentLabel(point.record);
       const tooltipPerformance = document.createElement("span");
-      const load = point.record.weight === null ? "Load not recorded" : `${formatDecimal(Number(point.record.weight))} ${formatWeightUnit(point.record.exercise_name)}`;
+      const load = point.record.weight === null ? "Load not recorded" : `${formatDecimal(Number(point.record.weight))} ${formatWeightUnit(point.record.exercise_name, point.record.equipment_name)}`;
       const reps = point.record.reps === null ? "reps not recorded" : `${point.record.reps} ${point.record.reps === 1 ? "rep" : "reps"}`;
       tooltipPerformance.textContent = `${load} × ${reps}`;
       const tooltipContext = document.createElement("span");
@@ -623,6 +622,7 @@ export function createDashboardFeature(options) {
     const state = getBodyWeightState();
     return resolveOneRepMaxEstimates(calculateRirE1rmEstimates(record), state.weightByDate.get(record.performed_on), {
       exerciseName: record.exercise_name,
+      equipmentName: record.equipment_name,
       relativeEnabled: state.effectiveRelativeEnabled,
     });
   }
@@ -878,6 +878,16 @@ function formatBucketLabel(value, bucket) {
   return new Intl.DateTimeFormat(undefined, { day: "numeric", month: "short", timeZone: "UTC" }).format(date);
 }
 
-function formatWeightUnit(exerciseName) {
-  return /\(Dumbbell\)/i.test(exerciseName ?? "") ? "kg per dumbbell" : "kg";
+function formatWeightUnit(exerciseName, equipmentName = null) {
+  return usesPerDumbbellLoad({ equipmentName, exerciseName }) ? "kg per dumbbell" : "kg";
+}
+
+export function formatProgressionUnit(records, relativeEnabled = false) {
+  const perDumbbellFlags = new Set(records.map((record) => usesPerDumbbellLoad({
+    equipmentName: record?.equipment_name ?? null,
+    exerciseName: record?.exercise_name ?? null,
+  })));
+  if (perDumbbellFlags.size > 1) return relativeEnabled ? "× BW; dumbbell series per dumbbell" : "kg; dumbbell series per dumbbell";
+  if (perDumbbellFlags.has(true)) return relativeEnabled ? "× BW per dumbbell" : "kg per dumbbell";
+  return relativeEnabled ? "× BW" : "kg";
 }

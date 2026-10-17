@@ -99,7 +99,9 @@ Future high-quality longitudinal evidence can revise individual exercise–muscl
 
 ## Provenance and versioning
 
-The authoritative source is `EXERCISE_TO_MUSCLE_HYPERTROPHIC_RELEVANCE.csv`.
+The authoritative source is `EXERCISE_TO_MUSCLE_HYPERTROPHIC_RELEVANCE.csv`. It remains the unchanged provenance of the 138-exercise versions.
+
+Issue #22 removed equipment from exercise identity. The current published version covers 116 canonical exercises (4,640 cells); each canonical exercise keeps the authored row of its documented scoring source unchanged, as recorded in `docs/scientific/issue-22-canonical-exercise-identity.json`. `EXERCISE_TO_MUSCLE_HYPERTROPHIC_RELEVANCE_CANONICAL.csv` is that projection (no coefficient edited) and is what the public relevance-matrix explorer loads.
 
 The initial published version contains:
 

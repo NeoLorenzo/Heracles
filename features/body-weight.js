@@ -316,21 +316,23 @@ export function createBodyWeightFeature(options) {
       resetBodyWeightUserState();
       bodyCircumferenceFeature.reset();
     },
-    resolveOneRepMaxRange({ low, high, exerciseName, performedOn }) {
+    resolveOneRepMaxRange({ low, high, exerciseName, equipmentName = null, performedOn }) {
       return resolveOneRepMaxRange({
         low,
         high,
         exerciseName,
+        equipmentName,
         performedOn,
         relativeEnabled: bodyWeightUserState.effectiveRelativeEnabled,
         weightByDate: bodyWeightUserState.weightByDate,
       });
     },
-    formatOneRepMaxRange(low, high, exerciseName = "", performedOn = null) {
+    formatOneRepMaxRange(low, high, exerciseName = "", performedOn = null, equipmentName = null) {
       const range = resolveOneRepMaxRange({
         low,
         high,
         exerciseName,
+        equipmentName,
         performedOn,
         relativeEnabled: bodyWeightUserState.effectiveRelativeEnabled,
         weightByDate: bodyWeightUserState.weightByDate,
