@@ -403,7 +403,7 @@
                     <article class="tour-caption" role="tabpanel" id="tour-panel-presets" aria-labelledby="tour-tab-presets" data-tour-panel="presets" hidden>
                       <p class="tour-kicker">My Stuff</p>
                       <h3>Presets without stale numbers.</h3>
-                      <p>Save a reusable pool of exercises with a set count — from the catalogue or from a past session. Starting from a preset shuffles the order and creates blank sets, so yesterday's load is a reference, not a prescription.</p>
+                      <p>Save a reusable pool of exercises with a set count — from the catalogue or from a past session. Starting from a preset rotates the order you completed last time, optionally putting priority muscle groups first, and creates blank sets, so yesterday's load is a reference, not a prescription.</p>
                       <ul class="tour-points"><li>Build from scratch or a previous workout</li><li>Load, reps, RIR and equipment are never copied forward</li><li>Deleting a preset never touches history</li></ul>
                     </article>
                     <article class="tour-caption" role="tabpanel" id="tour-panel-body" aria-labelledby="tour-tab-body" data-tour-panel="body" hidden>
@@ -435,7 +435,7 @@
                   </div>
                   <figure class="story-visual" aria-label="A session started from the Push A preset with previous performance shown for each set.">
                     <div class="sv-card">
-                      <div class="sv-head"><span class="sv-pill">From preset · Push A</span><span class="sv-muted">Order shuffled · blank sets</span></div>
+                      <div class="sv-head"><span class="sv-pill">From preset · Push A</span><span class="sv-muted">Order rotated · blank sets</span></div>
                       <ol class="sv-ex-list">
                         <li><b>Chest Press (Incline 30)</b><span>3 sets</span></li>
                         <li><b>Pushdown (V-Bar)</b><span>3 sets</span></li>
@@ -1001,6 +1001,20 @@
           </div>
         </dialog>
 
+        <dialog id="delete-session-modal" class="session-modal" aria-labelledby="delete-session-title" aria-describedby="delete-session-message">
+          <div class="session-modal-card cancel-workout-card">
+            <div class="modal-header">
+              <h2 id="delete-session-title">Delete this workout?</h2>
+            </div>
+            <p id="delete-session-description" class="cancel-workout-message"></p>
+            <p id="delete-session-message" class="cancel-workout-message">This permanently removes the session and every exercise and set logged in it. Analytics and previous-performance context will no longer include it.</p>
+            <div class="modal-actions cancel-workout-actions">
+              <button id="keep-session-button" class="secondary-button" type="button">Keep workout</button>
+              <button id="confirm-delete-session-button" class="danger-button" type="button">Delete workout</button>
+            </div>
+          </div>
+        </dialog>
+
         <section id="session-history-page" class="page-panel" data-page-panel="session-history" hidden>
           <header class="data-header history-header">
             <div>
@@ -1155,7 +1169,7 @@
             <div class="section-heading preset-section-heading">
               <div>
                 <h2 id="my-presets-title">My Presets</h2>
-                <p>Reusable exercise pools for starting future workouts. Exercises are kept alphabetically, not in a prescribed order.</p>
+                <p>Reusable exercise pools for starting future workouts. Exercises are listed alphabetically; the workout order is set below, not by the preset.</p>
               </div>
               <button id="create-preset" class="primary-button" type="button">Create preset</button>
             </div>
@@ -1239,6 +1253,40 @@
                 </div>
               </form>
             </dialog>
+          </section>
+
+          <section class="dashboard-section preset-order-section" aria-labelledby="preset-order-title">
+            <div class="section-heading">
+              <div>
+                <h2 id="preset-order-title">Workout order</h2>
+                <p>How exercises are ordered when you start a workout from a preset. The order is a starting point: you can reorder freely during the workout, and the next rotation starts from the order you actually completed.</p>
+              </div>
+            </div>
+            <form id="preset-order-form" class="preset-order-form">
+              <fieldset class="preset-order-modes">
+                <legend>Order</legend>
+                <label class="preset-order-option">
+                  <input type="radio" name="preset-order-mode" value="balanced_rotation" checked />
+                  <span><strong>Balanced rotation</strong><small>Starts from your last completed workout from the same preset. The muscle group that went first moves to the back, and so does the exercise that went first, so over several workouts every exercise gets a turn at the front while you're freshest. The first workout from a preset starts in alphabetical order.</small></span>
+                </label>
+                <label class="preset-order-option">
+                  <input type="radio" name="preset-order-mode" value="muscle_group_priority" />
+                  <span><strong>Prioritize muscle groups</strong><small>Exercises that mainly train a selected group go first, placed earlier in the workout while you're fresher, and rotate among themselves. The other exercises follow and rotate too. Going earlier reliably helps performance in that session; Heracles does not claim it produces more muscle growth.</small></span>
+                </label>
+              </fieldset>
+              <fieldset id="preset-order-priority-groups" class="preset-order-groups" hidden>
+                <legend>Priority muscle groups</legend>
+                <div id="preset-order-group-options" class="preset-order-group-options"></div>
+              </fieldset>
+              <label class="preset-order-switch" for="preset-order-alternate">
+                <input id="preset-order-alternate" type="checkbox" checked />
+                <span><strong>Alternate exercises between muscle groups</strong><small>Orders exercises so that consecutive exercises train different main muscle groups where possible, for example chest press, triceps pushdown, pec fly, overhead triceps extension. All sets of an exercise stay together. This is a product decision to spread in-session fatigue, not a hypertrophy claim. Compound exercises also work other muscles, so it reduces overlapping fatigue but does not remove it. When off, exercises for the same group are kept together.</small></span>
+              </label>
+              <p class="section-note">An exercise mainly trains a muscle group when at least one of that group's muscles is a principal or major target (relevance 0.75 or 1.00) in the exercise-to-muscle hypertrophic relevance matrix. Its main group is the one with the highest relevance; ties follow the muscle-group list order. Exercises with no principal or major target are treated as non-priority and alternate as their own group.</p>
+              <button class="document-link" type="button" data-document="preset-order">How workout order works <span aria-hidden="true">→</span></button>
+              <p id="preset-order-status" class="dashboard-status" role="status" aria-live="polite"></p>
+              <button id="save-preset-order" class="primary-button" type="submit" disabled>Save workout order</button>
+            </form>
           </section>
         </section>
 

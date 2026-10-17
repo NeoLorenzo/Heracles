@@ -3,7 +3,13 @@ import { createSessionAutosave, SYNC_STATE, SYNC_LABELS } from "./session-autosa
 import { createSessionHistoryContext } from "./session-history-context.js";
 import { createSessionRenderer } from "./session-rendering.js";
 import { fetchRecentExerciseIds, fetchRecentGymIds } from "./session-recents.js";
+import { preparePresetExerciseOrder } from "./preset-order-inputs.js";
 import { isDraftSet } from "../../set-model.js";
+import {
+  ACTIVE_WORKOUT_CONFLICT_MESSAGE,
+  isReopenedCorrection,
+  reopenCompletedWorkoutSession,
+} from "./session-lifecycle.js";
 
 // Canonical equipment is owned once per user. Generic implements (Dumbbell, Barbell, ...) are offered at every
 // gym; machines and unknown-model placeholders are offered where their gym availability says they are.
@@ -27,6 +33,7 @@ export function createSessionFeature(options) {
     getClient,
     getUserId,
     ensureExerciseCatalogue,
+    ensureExerciseMuscleLookup,
     onNavigate,
     onSessionConcluded,
     onSessionCancelled,
@@ -246,7 +253,7 @@ export function createSessionFeature(options) {
 
     const { data: sessionData, error: sessionError } = await supabase
       .from("workout_sessions")
-      .select("id, owner_id, gym_id, performed_on, status, source_preset_id, source_preset_name, created_at")
+      .select("id, owner_id, gym_id, performed_on, status, source_preset_id, source_preset_name, exercise_order_basis, created_at")
       .eq("owner_id", userId)
       .eq("status", "in_progress")
       .limit(1)
@@ -258,7 +265,11 @@ export function createSessionFeature(options) {
       return null;
     }
 
-    activeSession = sessionData;
+    // A reopened completed session is a correction of history, not a new workout.
+    activeSession = {
+      ...sessionData,
+      is_history_correction: await isReopenedCorrection(supabase, userId, sessionData.id),
+    };
     await loadGyms();
 
     const { data: exerciseData, error: exerciseError } = await supabase
@@ -627,6 +638,7 @@ export function createSessionFeature(options) {
       }
 
       const concludedSessionId = activeSession.id;
+      const wasHistoryCorrection = activeSession.is_history_correction === true;
       historyContext.clearCache();
       activeSession = null;
       activeExercises = [];
@@ -635,7 +647,7 @@ export function createSessionFeature(options) {
       isConcluding = false;
 
       if (onSessionConcluded) {
-        onSessionConcluded(concludedSessionId);
+        onSessionConcluded(concludedSessionId, { wasHistoryCorrection });
       }
     } catch (error) {
       isConcluding = false;
@@ -646,12 +658,36 @@ export function createSessionFeature(options) {
     }
   }
 
+  function getCancelCopy() {
+    if (activeSession?.is_history_correction) {
+      return {
+        title: "Discard these corrections?",
+        message: "The completed workout will be restored exactly as it was before you reopened it.",
+        keep: "Keep editing",
+        confirm: "Discard corrections",
+      };
+    }
+    return {
+      title: "Cancel this workout?",
+      message: "Your in-progress workout session and all logged set data will be discarded.",
+      keep: "Keep workout",
+      confirm: "Cancel workout",
+    };
+  }
+
   function openCancelConfirmation() {
     if (isConcluding) return;
+    const copy = getCancelCopy();
     const cancelModal = typeof document !== "undefined" ? document.querySelector("#cancel-workout-modal") : null;
     if (cancelModal) {
       const keepBtn = cancelModal.querySelector("#keep-workout-button");
       const confirmBtn = cancelModal.querySelector("#confirm-cancel-workout-button");
+      const titleEl = cancelModal.querySelector("#cancel-workout-title");
+      const messageEl = cancelModal.querySelector(".cancel-workout-message");
+      if (titleEl) titleEl.textContent = copy.title;
+      if (messageEl) messageEl.textContent = copy.message;
+      if (keepBtn) keepBtn.textContent = copy.keep;
+      if (confirmBtn) confirmBtn.textContent = copy.confirm;
 
       if (keepBtn) {
         keepBtn.onclick = () => {
@@ -666,7 +702,7 @@ export function createSessionFeature(options) {
       }
       cancelModal.showModal();
     } else {
-      const confirmed = window.confirm("Cancel this workout? Your in-progress workout session and all logged set data will be discarded.");
+      const confirmed = window.confirm(`${copy.title} ${copy.message}`);
       if (confirmed) {
         void cancelActiveWorkoutSession();
       }
@@ -680,6 +716,8 @@ export function createSessionFeature(options) {
     if (!supabase || !userId || !activeSession) return;
 
     const targetSessionId = activeSession.id;
+    // The server restores a reopened completed session instead of deleting it.
+    const restoredCompletedSession = activeSession.is_history_correction === true;
 
     // 1. Abort pending autosave timers and requests immediately so no delayed write fires during cancellation
     autosave.abort();
@@ -706,10 +744,10 @@ export function createSessionFeature(options) {
       if (liveContainer) liveContainer.replaceChildren();
 
       if (onSessionCancelled) {
-        onSessionCancelled(targetSessionId);
+        onSessionCancelled(targetSessionId, { restoredCompletedSession });
       }
       if (onNavigate) {
-        onNavigate("home");
+        onNavigate(restoredCompletedSession ? "session-history" : "home");
       }
     } catch (error) {
       // 4. If cancellation fails:
@@ -717,7 +755,9 @@ export function createSessionFeature(options) {
       // - keep the active workout open
       // - restore retained edits to the existing autosave reconciliation path
       // - surface an error to the user
-      errorMessage = `Could not cancel workout: ${error.message}`;
+      errorMessage = restoredCompletedSession
+        ? `Could not discard corrections: ${error.message}`
+        : `Could not cancel workout: ${error.message}`;
       if (activeSession && activeSession.id === targetSessionId) {
         await autosave.retryPendingWrites(targetSessionId);
       }
@@ -1059,6 +1099,20 @@ export function createSessionFeature(options) {
     wizardModal.replaceChildren(container);
   }
 
+  async function reopenCompletedSession(sessionId) {
+    const supabase = getClient();
+    const userId = getUserId();
+    if (!supabase || !userId) throw new Error("You are no longer signed in.");
+    // The server enforces this too; checking first avoids a doomed request.
+    if (activeSession) throw new Error(ACTIVE_WORKOUT_CONFLICT_MESSAGE);
+
+    await reopenCompletedWorkoutSession(supabase, sessionId);
+    historyContext.clearCache();
+    const session = await loadActiveSession();
+    if (onNavigate) onNavigate("live-session");
+    return session;
+  }
+
   async function createSessionAndLaunch(gymId, presetId) {
     const supabase = getClient();
     if (!supabase) return;
@@ -1066,10 +1120,26 @@ export function createSessionFeature(options) {
     if (wizardModal && wizardModal.open) wizardModal.close();
 
     try {
-      const { data, error } = await supabase.rpc("start_or_resume_workout_session", {
-        p_gym_id: gymId,
-        p_preset_id: presetId,
-      });
+      const params = { p_gym_id: gymId, p_preset_id: presetId };
+      if (presetId !== null && presetId !== undefined) {
+        try {
+          const plannedOrder = await preparePresetExerciseOrder({
+            supabase,
+            userId: getUserId(),
+            presetId,
+            ensureExerciseMuscleLookup,
+          });
+          if (plannedOrder.exerciseIds.length) {
+            params.p_exercise_order = plannedOrder.exerciseIds;
+            params.p_exercise_order_basis = plannedOrder.basis;
+          }
+        } catch (orderError) {
+          // The server falls back to a stable alphabetical order and records that basis.
+          console.warn("Could not plan the preset exercise order.", orderError);
+        }
+      }
+
+      const { data, error } = await supabase.rpc("start_or_resume_workout_session", params);
 
       if (error) throw error;
       await loadActiveSession();
@@ -1116,6 +1186,9 @@ export function createSessionFeature(options) {
     },
     async cancelSession() {
       await cancelActiveWorkoutSession();
+    },
+    async reopenSession(sessionId) {
+      return await reopenCompletedSession(sessionId);
     },
     reset() {
       historyContext.clearCache();

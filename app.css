@@ -1389,6 +1389,28 @@ body.is-authenticated {
   content: "";
 }
 
+#signed-in .session-lifecycle-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 1rem;
+  margin: 0;
+  padding: 0.75rem 1.25rem;
+  border-top: 1px solid var(--hx-border);
+  background: var(--hx-surface-2);
+}
+
+#signed-in .session-lifecycle-status {
+  flex-basis: 100%;
+  margin: 0;
+  color: var(--hx-muted);
+  font-size: 0.8rem;
+}
+
+#signed-in .session-lifecycle-status:empty {
+  display: none;
+}
+
 #signed-in .exercise-list {
   display: grid;
   gap: 0;
@@ -2959,7 +2981,8 @@ body.is-authenticated {
 }
 
 /* Relative e1RM preference rendered as a switch. */
-#signed-in .relative-e1rm-setting {
+#signed-in .relative-e1rm-setting,
+#signed-in .preset-order-switch {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 1rem;
@@ -2972,7 +2995,8 @@ body.is-authenticated {
   cursor: pointer;
 }
 
-#signed-in .relative-e1rm-setting > input {
+#signed-in .relative-e1rm-setting > input,
+#signed-in .preset-order-switch > input {
   position: relative;
   grid-column: 2;
   grid-row: 1;
@@ -2987,7 +3011,8 @@ body.is-authenticated {
   transition: background var(--fs-motion-normal) var(--fs-motion-ease), border-color var(--fs-motion-normal) var(--fs-motion-ease);
 }
 
-#signed-in .relative-e1rm-setting > input::after {
+#signed-in .relative-e1rm-setting > input::after,
+#signed-in .preset-order-switch > input::after {
   position: absolute;
   top: 2px;
   left: 2px;
@@ -2999,31 +3024,136 @@ body.is-authenticated {
   transition: transform var(--fs-motion-normal) var(--hx-ease), background var(--fs-motion-normal) var(--fs-motion-ease);
 }
 
-#signed-in .relative-e1rm-setting > input:checked {
+#signed-in .relative-e1rm-setting > input:checked,
+#signed-in .preset-order-switch > input:checked {
   border-color: var(--hx-accent);
   background: var(--hx-accent);
 }
 
-#signed-in .relative-e1rm-setting > input:checked::after {
+#signed-in .relative-e1rm-setting > input:checked::after,
+#signed-in .preset-order-switch > input:checked::after {
   background: #000000;
   transform: translateX(1rem);
 }
 
-#signed-in .relative-e1rm-setting > span {
+#signed-in .relative-e1rm-setting > span,
+#signed-in .preset-order-switch > span {
   grid-column: 1;
   grid-row: 1;
   gap: 0.3rem;
 }
 
-#signed-in .relative-e1rm-setting strong {
+#signed-in .relative-e1rm-setting strong,
+#signed-in .preset-order-switch strong {
   font-size: 0.875rem;
   font-weight: 600;
 }
 
-#signed-in .relative-e1rm-setting small {
+#signed-in .relative-e1rm-setting small,
+#signed-in .preset-order-switch small {
   color: var(--hx-muted);
   font-size: 0.78rem;
   line-height: 1.5;
+}
+
+/* Preset workout order preference (My Stuff). */
+#signed-in .preset-order-form {
+  display: grid;
+  gap: 1rem;
+}
+
+#signed-in .preset-order-form > .preset-order-switch {
+  margin: 0;
+}
+
+#signed-in .preset-order-modes,
+#signed-in .preset-order-groups {
+  display: grid;
+  gap: 0.6rem;
+  min-width: 0;
+  margin: 0;
+  padding: 1rem;
+  border: 1px solid var(--hx-border);
+  border-radius: var(--hx-radius-lg);
+  background: var(--hx-surface);
+}
+
+#signed-in .preset-order-modes legend,
+#signed-in .preset-order-groups legend {
+  padding: 0 0.35rem;
+  color: var(--hx-text);
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+#signed-in .preset-order-option {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 0.75rem;
+  align-items: start;
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--hx-border);
+  border-radius: var(--hx-radius);
+  background: var(--hx-surface-2);
+  cursor: pointer;
+}
+
+#signed-in .preset-order-option:has(input:checked) {
+  border-color: var(--hx-accent);
+}
+
+#signed-in .preset-order-option input,
+#signed-in .preset-order-group input {
+  width: 1rem;
+  height: 1rem;
+  margin: 0.15rem 0 0;
+  accent-color: var(--hx-accent);
+}
+
+#signed-in .preset-order-option span {
+  display: grid;
+  gap: 0.3rem;
+}
+
+#signed-in .preset-order-option strong {
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+#signed-in .preset-order-option small {
+  color: var(--hx-muted);
+  font-size: 0.78rem;
+  line-height: 1.5;
+}
+
+#signed-in .preset-order-group-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+#signed-in .preset-order-group {
+  display: inline-flex;
+  gap: 0.45rem;
+  align-items: center;
+  padding: 0.4rem 0.75rem;
+  border: 1px solid var(--hx-border);
+  border-radius: 999px;
+  background: var(--hx-surface-2);
+  font-size: 0.8125rem;
+  cursor: pointer;
+}
+
+#signed-in .preset-order-group:has(input:checked) {
+  border-color: var(--hx-accent);
+}
+
+#signed-in .preset-order-group input {
+  margin: 0;
+}
+
+#signed-in .preset-order-form > .primary-button {
+  justify-self: start;
 }
 
 #signed-in .body-weight-import-form {
@@ -3145,6 +3275,44 @@ body.is-authenticated {
   font-size: 0.8125rem;
 }
 
+/* Why a preset-started workout begins in its order. */
+#signed-in .live-order-note {
+  display: grid;
+  gap: 0.4rem;
+  margin: 0 0 1rem;
+  padding: 0.85rem 1rem;
+  border: 1px solid var(--hx-border);
+  border-radius: var(--hx-radius);
+  background: var(--hx-surface-2);
+  color: var(--hx-text-2);
+  font-size: 0.8125rem;
+  line-height: 1.5;
+}
+
+#signed-in .live-order-note p {
+  margin: 0;
+}
+
+#signed-in .live-order-note-details {
+  display: grid;
+  gap: 0.4rem;
+}
+
+#signed-in .live-order-note-details summary {
+  color: var(--hx-muted);
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+#signed-in .live-order-note-details[open] summary {
+  margin-bottom: 0.3rem;
+}
+
+#signed-in .live-order-note-details p + p {
+  margin-top: 0.35rem;
+}
+
 #signed-in .live-sync-badge {
   gap: 0.4rem;
   min-height: 1.6rem;
@@ -3177,6 +3345,17 @@ body.is-authenticated {
   border: 1px solid color-mix(in srgb, var(--hx-danger) 45%, transparent);
   background: color-mix(in srgb, var(--hx-danger) 10%, transparent);
   color: var(--hx-danger);
+}
+
+#signed-in .live-correction-notice {
+  margin-top: 1rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid color-mix(in srgb, var(--hx-warning) 40%, transparent);
+  border-radius: var(--hx-radius);
+  background: color-mix(in srgb, var(--hx-warning) 8%, transparent);
+  color: var(--hx-warning);
+  font-size: 0.8125rem;
+  font-weight: 550;
 }
 
 #signed-in .live-error-banner {

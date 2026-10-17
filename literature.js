@@ -39,6 +39,11 @@ export const LITERATURE_DOCUMENTS = {
     path: "./docs/CURRENT_LIMITATIONS_OF_MUSCLE_GROUP_MAPPING.md",
     label: "Model limitations",
   },
+  "preset-order": {
+    title: "Preset workout order",
+    path: "./docs/PRESET_EXERCISE_ORDER.md",
+    label: "Product decision",
+  },
   "no-tonnage": {
     title: "Why the App Does Not Track Tonnage",
     path: "./docs/WHY_THE_APP_DOES_NOT_TRACK_TONNAGE.md",

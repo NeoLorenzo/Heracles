@@ -4,6 +4,7 @@ import {
   formatInlinePreviousSet,
 } from "./session-history-context.js";
 import { isCompletedSet, usesPerDumbbellLoad } from "../../set-model.js";
+import { describeExerciseOrderBasis } from "../../preset-ordering.js";
 
 export function parseWorkoutWeightInput(rawValue) {
   const value = String(rawValue ?? "").trim();
@@ -282,6 +283,15 @@ export function createSessionRenderer(options) {
       titleRow.append(titleLockup, syncBadge);
       header.append(titleRow);
 
+      const isHistoryCorrection = session.is_history_correction === true;
+      if (isHistoryCorrection) {
+        const correctionNotice = document.createElement("p");
+        correctionNotice.className = "live-correction-notice";
+        correctionNotice.setAttribute("role", "note");
+        correctionNotice.textContent = `Correcting a completed workout from ${formatDateLong(session.performed_on)}. Save corrections to update your history, or discard them to restore the original.`;
+        header.append(correctionNotice);
+      }
+
       if (errorMessage) {
         const errorBanner = document.createElement("div");
         errorBanner.className = "live-error-banner";
@@ -293,6 +303,33 @@ export function createSessionRenderer(options) {
       container.append(header);
 
       const sortedExercises = [...exercises].sort((a, b) => a.exercise_order - b.exercise_order);
+
+      const orderLines = sortedExercises.length ? describeExerciseOrderBasis(session.exercise_order_basis) : [];
+      if (orderLines.length) {
+        const orderNote = document.createElement("aside");
+        orderNote.className = "live-order-note";
+        orderNote.setAttribute("aria-label", "Why the exercises are in this order");
+
+        const summary = document.createElement("p");
+        summary.className = "live-order-note-summary";
+        summary.textContent = orderLines[0];
+        orderNote.append(summary);
+
+        if (orderLines.length > 1) {
+          const details = document.createElement("details");
+          details.className = "live-order-note-details";
+          const detailsSummary = document.createElement("summary");
+          detailsSummary.textContent = "How this order was chosen";
+          details.append(detailsSummary);
+          for (const line of orderLines.slice(1)) {
+            const paragraph = document.createElement("p");
+            paragraph.textContent = line;
+            details.append(paragraph);
+          }
+          orderNote.append(details);
+        }
+        container.append(orderNote);
+      }
 
       // Check if session is completely empty
       if (sortedExercises.length === 0) {
@@ -777,7 +814,7 @@ export function createSessionRenderer(options) {
       const cancelBtn = document.createElement("button");
       cancelBtn.type = "button";
       cancelBtn.className = "text-button danger-link cancel-session-button";
-      cancelBtn.textContent = "Cancel workout";
+      cancelBtn.textContent = isHistoryCorrection ? "Discard corrections" : "Cancel workout";
       cancelBtn.addEventListener("click", onCancelSession);
       leftActions.append(cancelBtn);
 
@@ -793,7 +830,9 @@ export function createSessionRenderer(options) {
       const concludeBtn = document.createElement("button");
       concludeBtn.type = "button";
       concludeBtn.className = "primary-button conclude-session-button";
-      concludeBtn.textContent = isConcluding ? "Finishing…" : "Finish workout";
+      concludeBtn.textContent = isHistoryCorrection
+        ? (isConcluding ? "Saving…" : "Save corrections")
+        : (isConcluding ? "Finishing…" : "Finish workout");
       concludeBtn.disabled = isConcluding || !hasCompletedSet;
       if (!hasCompletedSet) {
         concludeBtn.title = "Log at least one completed set to finish this workout.";

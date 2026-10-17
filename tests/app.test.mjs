@@ -342,7 +342,7 @@ test("renders collapsed sessions with toggleable exercise-level muscle pills", a
   assert.match(app, /\.gt\("relevance", 0\)/);
   assert.match(app, /document\.createElement\("details"\)/);
   assert.match(app, /document\.createElement\("summary"\)/);
-  assert.match(app, /disclosure\.append\(summary, exerciseList\)/);
+  assert.match(app, /disclosure\.append\(summary\);[\s\S]*disclosure\.append\(exerciseList\)/);
   assert.doesNotMatch(app, /disclosure\.open\s*=|setAttribute\("open"/);
   assert.match(app, /exercise\.exercise_sets\.some\(isAnalyticalWorkingSet\)/);
   assert.match(app, /className = `muscle-pill muscle-group-\$\{muscle\.uiGroup\.code\}`/);
@@ -546,7 +546,7 @@ test("renders repository literature as safe in-app document pages", async () => 
     "[Taxonomy](MUSCLE_GROUP_TAXONOMY.md)",
   ].join("\n"));
 
-  assert.equal(Object.keys(LITERATURE_DOCUMENTS).length, 10);
+  assert.equal(Object.keys(LITERATURE_DOCUMENTS).length, 11);
   assert.ok(Object.values(LITERATURE_DOCUMENTS).every((document) => document.path.startsWith("./docs/")));
   assert.ok(Object.values(LITERATURE_DOCUMENTS).every((document) => /^[A-Z0-9_]+\.md$/.test(document.path.split("/").pop())));
   await Promise.all(Object.values(LITERATURE_DOCUMENTS).map((document) => read(document.path.replace(/^\.\//, ""))));

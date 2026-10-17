@@ -1,7 +1,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select plan(71);
+select plan(72);
 
 -- Schema
 select has_table('public', 'equipment', 'canonical equipment table exists');
@@ -400,6 +400,7 @@ select is(
 select lives_ok($sql$ select heracles_private.issue22_undo_canonical_equipment(); $sql$, 'canonical equipment step can be undone');
 select hasnt_table('public', 'equipment', 'undo removes the canonical equipment table');
 select has_function('public', 'create_or_get_gym_equipment', array['bigint', 'text'], 'undo restores gym-scoped equipment creation');
+select is((select array_agg(oid::regprocedure::text) from pg_catalog.pg_proc where proname = 'start_or_resume_workout_session' and pronamespace = 'public'::regnamespace and pronargs >= 2), array['start_or_resume_workout_session(bigint,bigint)'], 'undo leaves exactly one gym-and-preset start function even after issue #78');
 select is(
   (select ge.name || ' @ ' || g.name from public.session_exercises se join public.gym_equipment ge on ge.id = se.gym_equipment_id join public.gyms g on g.id = ge.gym_id
    where se.id = (select session_exercise_id from public.issue22_test_fixture_rows where label = 'live_default')),
