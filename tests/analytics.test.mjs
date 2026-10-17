@@ -207,3 +207,29 @@ test("calculates recent percentage changes without infinite zero-baseline values
   assert.equal(calculatePercentageChange(8, 8), 0);
   assert.equal(calculatePercentageChange(5, 0), null);
 });
+
+test("ISSUE 22: one exercise performed with Dumbbell at several gyms forms one progression series", () => {
+  const records = joinDashboardData(
+    [{ id: 10, performed_on: "2026-08-10" }, { id: 11, performed_on: "2026-08-17" }],
+    [
+      { id: 20, session_id: 10, exercise_id: 1, exercises: { name: "Lateral Raise (Seated)" }, gym_equipment_id: 42, canonical_equipment_id: 7, equipment: { name: "Dumbbell" }, equipment_name_snapshot: "Dumbbell" },
+      { id: 21, session_id: 11, exercise_id: 1, exercises: { name: "Lateral Raise (Seated)" }, gym_equipment_id: 43, canonical_equipment_id: 7, equipment: { name: "Dumbbell" }, equipment_name_snapshot: "Dumbbell" },
+    ],
+    [
+      { id: 1, session_exercise_id: 20, is_warmup: false, reported_rir_bucket: 1, weight: 12, reps: 12 },
+      { id: 2, session_exercise_id: 21, is_warmup: false, reported_rir_bucket: 1, weight: 14, reps: 10 },
+    ],
+  );
+  assert.deepEqual([...new Set(records.map(getEquipmentSeriesKey))], ["equipment-7"]);
+  assert.deepEqual(selectRepresentativeSetsBySeries(records, 1).map(getEquipmentSeriesKey), ["equipment-7", "equipment-7"]);
+});
+
+test("ISSUE 22: series labels use the current canonical name so corrected placeholders relabel history", () => {
+  const [record] = joinDashboardData(
+    [{ id: 10, performed_on: "2026-08-10" }],
+    [{ id: 20, session_id: 10, exercise_id: 1, exercises: { name: "Leg Extension" }, gym_equipment_id: null, canonical_equipment_id: 9, equipment: { name: "Matrix G3-S71" }, equipment_name_snapshot: null }],
+    [{ id: 1, session_exercise_id: 20, is_warmup: false }],
+  );
+  assert.equal(record.equipment_id, 9);
+  assert.equal(record.equipment_name, "Matrix G3-S71");
+});

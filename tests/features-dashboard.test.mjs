@@ -57,7 +57,7 @@ test("dashboard synchronizes contextual range controls and keeps progression his
   assert.match(source, /date\.textContent = formatHistoryDate\(record\.performed_on\)/);
   assert.match(source, /function formatHistoryDate\(value\)/);
   assert.match(source, /padStart\(2, "0"\)/);
-  assert.match(source, /\$\{formatDecimal\(Number\(record\.weight\)\)\} kg/);
+  assert.match(source, /\$\{formatDecimal\(Number\(record\.weight\)\)\} \$\{formatWeightUnit\(record\.exercise_name, record\.equipment_name\)\}/);
   assert.match(source, /formatEquipmentLabel\(record\)/);
   assert.match(source, /formatEquipmentLabel\(sample\)/);
   assert.match(source, /formatEquipmentLabel\(point\.record\)/);
@@ -147,4 +147,15 @@ test("progression uses equipment toggle pills instead of formula legend entries"
   assert.match(source, /visibleObservations = observations\.filter/);
   assert.match(source, /class", "progression-band"/);
   assert.doesNotMatch(source, /for \(const model of E1RM_MODELS\) \{[\s\S]{0,180}legend\.append/);
+});
+
+test("ISSUE 22: a canonical exercise mixing dumbbell and barbell series labels dumbbell loads per dumbbell", async () => {
+  const { formatProgressionUnit } = await import("../features/dashboard.js");
+  const barbell = { exercise_name: "Chest Press (Incline 30)", equipment_name: "Barbell" };
+  const dumbbell = { exercise_name: "Chest Press (Incline 30)", equipment_name: "Dumbbell" };
+  assert.equal(formatProgressionUnit([barbell]), "kg");
+  assert.equal(formatProgressionUnit([dumbbell]), "kg per dumbbell");
+  assert.equal(formatProgressionUnit([dumbbell], true), "× BW per dumbbell");
+  assert.equal(formatProgressionUnit([barbell, dumbbell]), "kg; dumbbell series per dumbbell");
+  assert.equal(formatProgressionUnit([barbell, dumbbell], true), "× BW; dumbbell series per dumbbell");
 });

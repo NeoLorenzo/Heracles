@@ -1,0 +1,1299 @@
+{
+  "issue": 22,
+  "title": "Canonical exercise identity independent of equipment",
+  "date": "2026-10-17",
+  "decision": "Exercise names no longer encode the implement or machine used. Equipment is recorded separately on each performed exercise. Exercises that differed only by equipment are merged into one canonical exercise; the surviving catalogue row keeps its stable code and identifier, merged rows are retired (is_active = false) with their original names and historical coefficients intact.",
+  "movementModelDecision": "Each canonical exercise inherits the full movement-pattern vector of its scoring source unchanged, except the two machine incline chest presses, which receive the same isometric scapulothoracic retraction (0.4) and depression (0.25) coefficients as every bench and Smith chest press.",
+  "movementAlignmentRationale": "In a supported chest press the scapulae are held retracted and depressed against the pad whether the lifter lies on a bench or sits on a machine, so the isometric scapular contribution applies to both. The previous zero on the machine incline rows was inconsistent with the bench and machine flat-press decision approved on 2026-10-17.",
+  "mergedScoringDecisions": [
+    {
+      "canonicalName": "Chest Press",
+      "source": "Press (Barbell)",
+      "dropped": [
+        "Press (Cable) (Horizontal): dynamic scapulothoracic protraction 0.4 and serratus anterior relevance 0.25",
+        "Press (Machine) (Horizontal) and (Plate Loaded): no isometric retraction/depression"
+      ],
+      "reason": "Flat pressing on a bench or a seated machine is one movement; the bench scoring (scapulae held back and down) is used by 20 of the 24 chest-press variants."
+    },
+    {
+      "canonicalName": "Row (Chest Supported) (Wide Grip)",
+      "source": "Row (T-Bar) (Chest Supported) (Wide-Grip)",
+      "dropped": [
+        "Row (Machine) (Chest Supported) (Wide Grip): isometric lumbar extension 0.2"
+      ],
+      "reason": "Every other chest-supported row scores isometric lumbar extension 0; with the torso on a pad the lumbar spine is not holding the trunk upright."
+    },
+    {
+      "canonicalName": "Row (Close Grip)",
+      "source": "Row (Cable Machine) (Close Grip)",
+      "dropped": [
+        "Row (Machine) (Close Grip): isometric lumbar extension 0.2"
+      ],
+      "reason": "Without chest support the lumbar extensors hold the trunk upright (0.3); padded variants are the separate Chest Supported exercises."
+    },
+    {
+      "canonicalName": "Row (Close Grip) (Unilateral)",
+      "source": "Row (Cable Machine) (Close Grip) (Unilateral)",
+      "dropped": [
+        "Row (Machine) (Close Grip) (Unilateral): isometric lumbar extension 0.2"
+      ],
+      "reason": "Same as Row (Close Grip)."
+    }
+  ],
+  "hypertrophicRelevanceDecision": "Each canonical exercise inherits the authored relevance vector of its scoring source unchanged. No relevance coefficient is invented or edited.",
+  "equipmentInference": "Performed exercises with no recorded equipment receive the equipment their previous exercise name stated: Dumbbell, Barbell, EZ Bar and Bodyweight are generic equipment; Machine, Cable, Smith Machine, Leg Press, Pec Deck and T-Bar become a per-gym '<Type> (unknown model)' placeholder to be corrected with the real model.",
+  "canonicalExercises": [
+    {
+      "canonicalName": "Back Extensions",
+      "scoringSource": "Back Extensions (Dumbbell)",
+      "merged": [
+        {
+          "previousName": "Back Extensions (Dumbbell)",
+          "inferredEquipment": "Dumbbell"
+        }
+      ]
+    },
+    {
+      "canonicalName": "Behind Back Wrist Curls (Straight Bar)",
+      "scoringSource": "Behind Back Wrist Curls (Cable) (Straight Bar)",
+      "merged": [
+        {
+          "previousName": "Behind Back Wrist Curls (Cable) (Straight Bar)",
+          "inferredEquipment": "Cable"
+        }
+      ]
+    },
+    {
+      "canonicalName": "Belt Squat",
+      "scoringSource": "Belt Squat (Machine)",
+      "merged": [
+        {
+          "previousName": "Belt Squat (Machine)",
+          "inferredEquipment": "Machine"
+        }
+      ]
+    },
+    {
+      "canonicalName": "Calf Raises",
+      "scoringSource": "Calf Raises (Leg Press Machine)",
+      "merged": [
+        {
+          "previousName": "Calf Raises (Leg Press Machine)",
+          "inferredEquipment": "Leg Press"
+        }
+      ]
+    },
+    {
+      "canonicalName": "Calf Raises (Standing)",
+      "scoringSource": "Calf Raises (Machine) (Standing)",
+      "merged": [
+        {
+          "previousName": "Calf Raises (Machine) (Standing)",
+          "inferredEquipment": "Machine"
+        }
+      ]
+    },
+    {
+      "canonicalName": "Chest Fly (Bent Over Standing) (Horizontal)",
+      "scoringSource": "Chest Fly (Cable) (Bent Over Standing) (Horizontal)",
+      "merged": [
+        {
+          "previousName": "Chest Fly (Cable) (Bent Over Standing) (Horizontal)",
+          "inferredEquipment": "Cable"
+        }
+      ]
+    },
+    {
+      "canonicalName": "Chest Fly (Kneeling) (Horizontal)",
+      "scoringSource": "Chest Fly (Cable) (Kneeling) (Horizontal)",
+      "merged": [
+        {
+          "previousName": "Chest Fly (Cable) (Kneeling) (Horizontal)",
+          "inferredEquipment": "Cable"
+        }
+      ]
+    },
+    {
+      "canonicalName": "Chest Fly (Seated) (Horizontal)",
+      "scoringSource": "Chest Fly (Cable) (Seated) (Horizontal)",
+      "merged": [
+        {
+          "previousName": "Chest Fly (Cable) (Seated) (Horizontal)",
+          "inferredEquipment": "Cable"
+        }
+      ]
+    },
+    {
+      "canonicalName": "Chest Press",
+      "scoringSource": "Press (Barbell)",
+      "merged": [
+        {
+          "previousName": "Press (Barbell)",
+          "inferredEquipment": "Barbell"
+        },
+        {
+          "previousName": "Press (Cable) (Horizontal)",
+          "inferredEquipment": "Cable"
+        },
+        {
+          "previousName": "Press (Machine) (Horizontal)",
+          "inferredEquipment": "Machine"
+        },
+        {
+          "previousName": "Press (Machine) (Horizontal) (Plate Loaded)",
+          "inferredEquipment": "Machine"
+        },
+        {
+          "previousName": "Press (Smith Machine)",
+          "inferredEquipment": "Smith Machine"
+        }
+      ]
+    },
+    {
+      "canonicalName": "Chest Press (Incline 10)",
+      "scoringSource": "Press (Smith Machine) (Incline 10)",
+      "merged": [
+        {
+          "previousName": "Press (Smith Machine) (Incline 10)",
+          "inferredEquipment": "Smith Machine"
+        }
+      ]
+    },
+    {
+      "canonicalName": "Chest Press (Incline 15)",
+      "scoringSource": "Press (Barbell) (Incline 15)",
+      "merged": [
+        {
+          "previousName": "Press (Barbell) (Incline 15)",
+          "inferredEquipment": "Barbell"
+        },
+        {
+          "previousName": "Press (Dumbbell) (Incline 15)",
+          "inferredEquipment": "Dumbbell"
+        }
+      ]
+    },
+    {
+      "canonicalName": "Chest Press (Incline 20)",
+      "scoringSource": "Press (Barbell) (Incline 20)",
+      "merged": [
+        {
+          "previousName": "Press (Barbell) (Incline 20)",
+          "inferredEquipment": "Barbell"
+        },
+        {
+          "previousName": "Press (Dumbbell) (Incline 20)",
+          "inferredEquipment": "Dumbbell"
+        }
+      ]
+    },
+    {
+      "canonicalName": "Chest Press (Incline 24)",
+      "scoringSource": "Press (Barbell) (Incline 24)",
+      "merged": [
+        {
+          "previousName": "Press (Barbell) (Incline 24)",
+          "inferredEquipment": "Barbell"
+        },
+        {
+          "previousName": "Press (Dumbbell) (Incline 24)",
+          "inferredEquipment": "Dumbbell"
+        }
+      ]
+    },
+    {
+      "canonicalName": "Chest Press (Incline 30)",
+      "scoringSource": "Press (Barbell) (Incline 30)",
+      "merged": [
+        {
+          "previousName": "Press (Barbell) (Incline 30)",
+          "inferredEquipment": "Barbell"
+        },
+        {
+          "previousName": "Press (Dumbbell) (Incline 30)",
+          "inferredEquipment": "Dumbbell"
+        },
+        {
+          "previousName": "Press (Smith Machine) (Incline 30)",
+          "inferredEquipment": "Smith Machine"
+        }
+      ]
+    },
+    {
+      "canonicalName": "Chest Press (Incline 30) (Larson)",
+      "scoringSource": "Press (Barbell) (Incline 30) (Larson)",
+      "merged": [
+        {
+          "previousName": "Press (Barbell) (Incline 30) (Larson)",
+          "inferredEquipment": "Barbell"
+        }
+      ]
+    },
+    {
+      "canonicalName": "Chest Press (Incline 40)",
+      "scoringSource": "Press (Dumbbell) (Incline 40)",
+      "merged": [
+        {
+          "previousName": "Press (Dumbbell) (Incline 40)",
+          "inferredEquipment": "Dumbbell"
+        }
+      ]
+    },
+    {
+      "canonicalName": "Chest Press (Incline)",
+      "scoringSource": "Press (Machine) (Incline)",
+      "merged": [
+        {
+          "previousName": "Press (Machine) (Incline)",
+          "inferredEquipment": "Machine"
+        },
+        {
+          "previousName": "Press (Machine) (Incline) (Plate Loaded)",
+          "inferredEquipment": "Machine"
+        }
+      ]
+    },
+    {
+      "canonicalName": "Chest Press (Incline) (Close Neutral Grip)",
+      "scoringSource": "Press (Machine) (Incline) (Plate Loaded) (Close Neutral Grip)",
+      "merged": [
+        {
+          "previousName": "Press (Machine) (Incline) (Plate Loaded) (Close Neutral Grip)",
+          "inferredEquipment": "Machine"
+        }
+      ]
+    },
+    {
+      "canonicalName": "Chest Press (Larson)",
+      "scoringSource": "Press (Barbell) (Larson)",
+      "merged": [
+        {
+          "previousName": "Press (Barbell) (Larson)",
+          "inferredEquipment": "Barbell"
+        },
+        {
+          "previousName": "Press (Smith Machine) (Larson)",
+          "inferredEquipment": "Smith Machine"
+        }
+      ]
+    },
+    {
+      "canonicalName": "Chest Press (Paused)",
+      "scoringSource": "Press (Barbell) (Paused)",
+      "merged": [
+        {
+          "previousName": "Press (Barbell) (Paused)",
+          "inferredEquipment": "Barbell"
+        }
+      ]
+    },
+    {
+      "canonicalName": "Chest Press (Spoto) (Paused)",
+      "scoringSource": "Press (Barbell) (Spoto) (Paused)",
+      "merged": [
+        {
+          "previousName": "Press (Barbell) (Spoto) (Paused)",
+          "inferredEquipment": "Barbell"
+        }
+      ]
+    },
+    {
+      "canonicalName": "Crunch",
+      "scoringSource": "Crunch (Machine)",
+      "merged": [
+        {
+          "previousName": "Crunch (Machine)",
+          "inferredEquipment": "Machine"
+        }
+      ]
+    },
+    {
+      "canonicalName": "Curl (Bayesian) (Unilateral)",
+      "scoringSource": "Curl (Cable) (Bayesian) (Unilateral)",
+      "merged": [
+        {
+          "previousName": "Curl (Cable) (Bayesian) (Unilateral)",
+          "inferredEquipment": "Cable"
+        }
+      ]
+    },
+    {
+      "canonicalName": "Curl (Concentration) (Unilateral)",
+      "scoringSource": "Curl (Dumbbell) (Concentration) (Unilateral)",
+      "merged": [
+        {
+          "previousName": "Curl (Dumbbell) (Concentration) (Unilateral)",
+          "inferredEquipment": "Dumbbell"
+        }
+      ]
+    },
+    {
+      "canonicalName": "Curl (EZ Bar Attachment)",
+      "scoringSource": "Curl (Cable) (EZ Bar Attachment)",
+      "merged": [
+        {
+          "previousName": "Curl (Cable) (EZ Bar Attachment)",
+          "inferredEquipment": "Cable"
+        }
+      ]
+    },
+    {
+      "canonicalName": "Curl (Incline)",
+      "scoringSource": "Curl (Dumbbell) (Incline)",
+      "merged": [
+        {
+          "previousName": "Curl (Dumbbell) (Incline)",
+          "inferredEquipment": "Dumbbell"
+        }
+      ]
+    },
+    {
+      "canonicalName": "Curl (Preacher)",
+      "scoringSource": "Curl (EZ Bar) (Preacher)",
+      "merged": [
+        {
+          "previousName": "Curl (EZ Bar) (Preacher)",
+          "inferredEquipment": "EZ Bar"
+        }
+      ]
+    },
+    {
+      "canonicalName": "Curl (Preacher) (Unilateral)",
+      "scoringSource": "Curl (Dumbbell) (Preacher) (Unilateral)",
+      "merged": [
+        {
+          "previousName": "Curl (Dumbbell) (Preacher) (Unilateral)",
+          "inferredEquipment": "Dumbbell"
+        },
+        {
+          "previousName": "Curl (Machine) (Preacher) (Unilateral)",
+          "inferredEquipment": "Machine"
+        }
+      ]
+    },
+    {
+      "canonicalName": "Decline Weighted Sit Ups",
+      "scoringSource": "Decline Weighted Sit Ups (Dumbbell)",
+      "merged": [
+        {
+          "previousName": "Decline Weighted Sit Ups (Dumbbell)",
+          "inferredEquipment": "Dumbbell"
+        }
+      ]
+    },
+    {
+      "canonicalName": "Dips",
+      "scoringSource": "Dips (Machine)",
+      "merged": [
+        {
+          "previousName": "Dips (Machine)",
+          "inferredEquipment": "Machine"
+        }
+      ]
+    },
+    {
+      "canonicalName": "Extension (Overhead)",
+      "scoringSource": "Extension (Dumbbell) (Overhead)",
+      "merged": [
+        {
+          "previousName": "Extension (Dumbbell) (Overhead)",
+          "inferredEquipment": "Dumbbell"
+        }
+      ]
+    },
+    {
+      "canonicalName": "Extension (Overhead) (Katana)",
+      "scoringSource": "Extension (Cable) (Overhead) (Katana)",
+      "merged": [
+        {
+          "previousName": "Extension (Cable) (Overhead) (Katana)",
+          "inferredEquipment": "Cable"
+        }
+      ]
+    },
+    {
+      "canonicalName": "Extension (Overhead) (Unilateral)",
+      "scoringSource": "Extension (Cable) (Overhead) (Unilateral)",
+      "merged": [
+        {
+          "previousName": "Extension (Cable) (Overhead) (Unilateral)",
+          "inferredEquipment": "Cable"
+        },
+        {
+          "previousName": "Extension (Dumbbell) (Overhead) (Unilateral)",
+          "inferredEquipment": "Dumbbell"
+        }
+      ]
+    },
+    {
+      "canonicalName": "Fly",
+      "scoringSource": "Fly (Pec Deck Machine)",
+      "merged": [
+        {
+          "previousName": "Fly (Pec Deck Machine)",
+          "inferredEquipment": "Pec Deck"
+        }
+      ]
+    },
+    {
+      "canonicalName": "Fly (High-to-Low)",
+      "scoringSource": "Fly (Cable) (High-to-Low)",
+      "merged": [
+        {
+          "previousName": "Fly (Cable) (High-to-Low)",
+          "inferredEquipment": "Cable"
+        }
+      ]
+    },
+    {
+      "canonicalName": "Fly (Low-to-High)",
+      "scoringSource": "Fly (Cable) (Low-to-High)",
+      "merged": [
+        {
+          "previousName": "Fly (Cable) (Low-to-High)",
+          "inferredEquipment": "Cable"
+        }
+      ]
+    },
+    {
+      "canonicalName": "Fly (Low-to-High) (Unilateral)",
+      "scoringSource": "Fly (Cable) (Low-to-High) (Unilateral)",
+      "merged": [
+        {
+          "previousName": "Fly (Cable) (Low-to-High) (Unilateral)",
+          "inferredEquipment": "Cable"
+        }
+      ]
+    },
+    {
+      "canonicalName": "French Press",
+      "scoringSource": "French Press (Machine)",
+      "merged": [
+        {
+          "previousName": "French Press (Machine)",
+          "inferredEquipment": "Machine"
+        }
+      ]
+    },
+    {
+      "canonicalName": "French Press (EZ Bar Attachment)",
+      "scoringSource": "French Press (Cable) (EZ Bar Attachment)",
+      "merged": [
+        {
+          "previousName": "French Press (Cable) (EZ Bar Attachment)",
+          "inferredEquipment": "Cable"
+        }
+      ]
+    },
+    {
+      "canonicalName": "French Press (V-Bar)",
+      "scoringSource": "French Press (Cable) (V-Bar)",
+      "merged": [
+        {
+          "previousName": "French Press (Cable) (V-Bar)",
+          "inferredEquipment": "Cable"
+        }
+      ]
+    },
+    {
+      "canonicalName": "Grip Squeeze",
+      "scoringSource": "Grip Squeeze (Machine)",
+      "merged": [
+        {
+          "previousName": "Grip Squeeze (Machine)",
+          "inferredEquipment": "Machine"
+        }
+      ]
+    },
+    {
+      "canonicalName": "Grip Squeeze (Unilateral)",
+      "scoringSource": "Grip Squeeze (Cable) (Unilateral)",
+      "merged": [
+        {
+          "previousName": "Grip Squeeze (Cable) (Unilateral)",
+          "inferredEquipment": "Cable"
+        }
+      ]
+    },
+    {
+      "canonicalName": "Hack Squat",
+      "scoringSource": "Hack Squat (Machine)",
+      "merged": [
+        {
+          "previousName": "Hack Squat (Machine)",
+          "inferredEquipment": "Machine"
+        }
+      ]
+    },
+    {
+      "canonicalName": "Hammer Curl (Alternating)",
+      "scoringSource": "Hammer Curl (Dumbbell) (Alternating)",
+      "merged": [
+        {
+          "previousName": "Hammer Curl (Dumbbell) (Alternating)",
+          "inferredEquipment": "Dumbbell"
+        }
+      ]
+    },
+    {
+      "canonicalName": "Hammer Curl (Concentration) (Unilateral)",
+      "scoringSource": "Hammer Curl (Dumbbell) (Concentration) (Unilateral)",
+      "merged": [
+        {
+          "previousName": "Hammer Curl (Dumbbell) (Concentration) (Unilateral)",
+          "inferredEquipment": "Dumbbell"
+        }
+      ]
+    },
+    {
+      "canonicalName": "Hammer Curl (Preacher) (Unilateral)",
+      "scoringSource": "Hammer Curl (Dumbbell) (Preacher) (Unilateral)",
+      "merged": [
+        {
+          "previousName": "Hammer Curl (Dumbbell) (Preacher) (Unilateral)",
+          "inferredEquipment": "Dumbbell"
+        }
+      ]
+    },
+    {
+      "canonicalName": "Hammer Curl (Seated)",
+      "scoringSource": "Hammer Curl (Dumbbell) (Seated)",
+      "merged": [
+        {
+          "previousName": "Hammer Curl (Dumbbell) (Seated)",
+          "inferredEquipment": "Dumbbell"
+        }
+      ]
+    },
+    {
+      "canonicalName": "Hammer Curl (Unilateral)",
+      "scoringSource": "Hammer Curl (Cable) (Unilateral)",
+      "merged": [
+        {
+          "previousName": "Hammer Curl (Cable) (Unilateral)",
+          "inferredEquipment": "Cable"
+        }
+      ]
+    },
+    {
+      "canonicalName": "Hip Adduction",
+      "scoringSource": "Adductor Machine (Machine)",
+      "merged": [
+        {
+          "previousName": "Adductor Machine (Machine)",
+          "inferredEquipment": "Machine"
+        }
+      ]
+    },
+    {
+      "canonicalName": "Hip Adduction (Unilateral)",
+      "scoringSource": "Adductor Machine (Machine) (Unilateral)",
+      "merged": [
+        {
+          "previousName": "Adductor Machine (Machine) (Unilateral)",
+          "inferredEquipment": "Machine"
+        }
+      ]
+    },
+    {
+      "canonicalName": "Hip Thrust",
+      "scoringSource": "Hip Thrust (Machine)",
+      "merged": [
+        {
+          "previousName": "Hip Thrust (Machine)",
+          "inferredEquipment": "Machine"
+        }
+      ]
+    },
+    {
+      "canonicalName": "JM Press (Unilateral)",
+      "scoringSource": "JM Press (Cable) (Unilateral)",
+      "merged": [
+        {
+          "previousName": "JM Press (Cable) (Unilateral)",
+          "inferredEquipment": "Cable"
+        }
+      ]
+    },
+    {
+      "canonicalName": "Kelso Shrug",
+      "scoringSource": "Kelso Shrug (Cable Machine)",
+      "merged": [
+        {
+          "previousName": "Kelso Shrug (Cable Machine)",
+          "inferredEquipment": "Cable"
+        }
+      ]
+    },
+    {
+      "canonicalName": "Kelso Shrug (Chest Supported)",
+      "scoringSource": "Kelso Shrug (Barbell) (Chest Supported)",
+      "merged": [
+        {
+          "previousName": "Kelso Shrug (Barbell) (Chest Supported)",
+          "inferredEquipment": "Barbell"
+        },
+        {
+          "previousName": "Kelso Shrug (Machine) (Chest Supported)",
+          "inferredEquipment": "Machine"
+        }
+      ]
+    },
+    {
+      "canonicalName": "Kickback",
+      "scoringSource": "Kickback (Cable)",
+      "merged": [
+        {
+          "previousName": "Kickback (Cable)",
+          "inferredEquipment": "Cable"
+        }
+      ]
+    },
+    {
+      "canonicalName": "Lat Pulldown (Close Grip)",
+      "scoringSource": "Lat Pulldown (Cable Machine) (Close Grip)",
+      "merged": [
+        {
+          "previousName": "Lat Pulldown (Cable Machine) (Close Grip)",
+          "inferredEquipment": "Cable"
+        },
+        {
+          "previousName": "Lat Pulldown (Machine) (Close Grip)",
+          "inferredEquipment": "Machine"
+        }
+      ]
+    },
+    {
+      "canonicalName": "Lat Pulldown (Kneeling) (Unilateral)",
+      "scoringSource": "Lat Pulldown (Cable) (Kneeling) (Unilateral)",
+      "merged": [
+        {
+          "previousName": "Lat Pulldown (Cable) (Kneeling) (Unilateral)",
+          "inferredEquipment": "Cable"
+        }
+      ]
+    },
+    {
+      "canonicalName": "Lat Pulldown (Neutral Grip)",
+      "scoringSource": "Lat Pulldown (Cable Machine) (Neutral Grip)",
+      "merged": [
+        {
+          "previousName": "Lat Pulldown (Cable Machine) (Neutral Grip)",
+          "inferredEquipment": "Cable"
+        }
+      ]
+    },
+    {
+      "canonicalName": "Lat Pulldown (Unilateral)",
+      "scoringSource": "Lat Pulldown (Cable Machine) (Unilateral)",
+      "merged": [
+        {
+          "previousName": "Lat Pulldown (Cable Machine) (Unilateral)",
+          "inferredEquipment": "Cable"
+        },
+        {
+          "previousName": "Lat Pulldown (Machine) (Unilateral)",
+          "inferredEquipment": "Machine"
+        }
+      ]
+    },
+    {
+      "canonicalName": "Lat Pulldown (Wide Grip)",
+      "scoringSource": "Lat Pulldown (Cable Machine) (Wide Grip)",
+      "merged": [
+        {
+          "previousName": "Lat Pulldown (Cable Machine) (Wide Grip)",
+          "inferredEquipment": "Cable"
+        },
+        {
+          "previousName": "Lat Pulldown (Machine) (Wide Grip)",
+          "inferredEquipment": "Machine"
+        }
+      ]
+    },
+    {
+      "canonicalName": "Lateral Raise",
+      "scoringSource": "Lateral Raise (Machine)",
+      "merged": [
+        {
+          "previousName": "Lateral Raise (Machine)",
+          "inferredEquipment": "Machine"
+        }
+      ]
+    },
+    {
+      "canonicalName": "Lateral Raise (Seated - Leaning)",
+      "scoringSource": "Lateral Raise (Dumbbells) (Seated - Leaning)",
+      "merged": [
+        {
+          "previousName": "Lateral Raise (Dumbbells) (Seated - Leaning)",
+          "inferredEquipment": "Dumbbell"
+        }
+      ]
+    },
+    {
+      "canonicalName": "Lateral Raise (Seated)",
+      "scoringSource": "Lateral Raise (Dumbbell) (Seated)",
+      "merged": [
+        {
+          "previousName": "Lateral Raise (Dumbbell) (Seated)",
+          "inferredEquipment": "Dumbbell"
+        }
+      ]
+    },
+    {
+      "canonicalName": "Lateral Raise (Standing)",
+      "scoringSource": "Lateral Raise (Dumbbell) (Standing)",
+      "merged": [
+        {
+          "previousName": "Lateral Raise (Dumbbell) (Standing)",
+          "inferredEquipment": "Dumbbell"
+        }
+      ]
+    },
+    {
+      "canonicalName": "Lateral Raise (Unilateral)",
+      "scoringSource": "Lateral Raise (Cable) (Unilateral)",
+      "merged": [
+        {
+          "previousName": "Lateral Raise (Cable) (Unilateral)",
+          "inferredEquipment": "Cable"
+        }
+      ]
+    },
+    {
+      "canonicalName": "Leg Curl (Prone)",
+      "scoringSource": "Leg Curl (Machine) (Prone)",
+      "merged": [
+        {
+          "previousName": "Leg Curl (Machine) (Prone)",
+          "inferredEquipment": "Machine"
+        }
+      ]
+    },
+    {
+      "canonicalName": "Leg Curl (Prone) (Unilateral)",
+      "scoringSource": "Leg Curl (Machine) (Prone) (Unilateral)",
+      "merged": [
+        {
+          "previousName": "Leg Curl (Machine) (Prone) (Unilateral)",
+          "inferredEquipment": "Machine"
+        }
+      ]
+    },
+    {
+      "canonicalName": "Leg Curl (Seated)",
+      "scoringSource": "Leg Curl (Machine) (Seated)",
+      "merged": [
+        {
+          "previousName": "Leg Curl (Machine) (Seated)",
+          "inferredEquipment": "Machine"
+        }
+      ]
+    },
+    {
+      "canonicalName": "Leg Curl (Seated) (Unilateral)",
+      "scoringSource": "Leg Curl (Machine) (Seated) (Unilateral)",
+      "merged": [
+        {
+          "previousName": "Leg Curl (Machine) (Seated) (Unilateral)",
+          "inferredEquipment": "Machine"
+        }
+      ]
+    },
+    {
+      "canonicalName": "Leg Extension",
+      "scoringSource": "Leg Extension (Machine)",
+      "merged": [
+        {
+          "previousName": "Leg Extension (Machine)",
+          "inferredEquipment": "Machine"
+        }
+      ]
+    },
+    {
+      "canonicalName": "Leg Extension (Unilateral)",
+      "scoringSource": "Leg Extension (Machine) (Unilateral)",
+      "merged": [
+        {
+          "previousName": "Leg Extension (Machine) (Unilateral)",
+          "inferredEquipment": "Machine"
+        }
+      ]
+    },
+    {
+      "canonicalName": "Leg Press",
+      "scoringSource": "Leg Press (Machine)",
+      "merged": [
+        {
+          "previousName": "Leg Press (Machine)",
+          "inferredEquipment": "Machine"
+        }
+      ]
+    },
+    {
+      "canonicalName": "Leg Press (Unilateral)",
+      "scoringSource": "Leg Press (Machine) (Unilateral)",
+      "merged": [
+        {
+          "previousName": "Leg Press (Machine) (Unilateral)",
+          "inferredEquipment": "Machine"
+        }
+      ]
+    },
+    {
+      "canonicalName": "Leg Press (Unilateral) (High Foot Placement)",
+      "scoringSource": "Leg Press (Machine) (Unilateral) (High Foot Placement)",
+      "merged": [
+        {
+          "previousName": "Leg Press (Machine) (Unilateral) (High Foot Placement)",
+          "inferredEquipment": "Machine"
+        },
+        {
+          "previousName": "Leg Press (Machine) (Unilateral) (High Foot Placement) (Plate Loaded)",
+          "inferredEquipment": "Machine"
+        }
+      ]
+    },
+    {
+      "canonicalName": "Lu Raises (Seated)",
+      "scoringSource": "Lu Raises (Dumbbell) (Seated)",
+      "merged": [
+        {
+          "previousName": "Lu Raises (Dumbbell) (Seated)",
+          "inferredEquipment": "Dumbbell"
+        }
+      ]
+    },
+    {
+      "canonicalName": "Lu Raises (Standing)",
+      "scoringSource": "Lu Raises (Dumbbell) (Standing)",
+      "merged": [
+        {
+          "previousName": "Lu Raises (Dumbbell) (Standing)",
+          "inferredEquipment": "Dumbbell"
+        }
+      ]
+    },
+    {
+      "canonicalName": "Overhead Press",
+      "scoringSource": "Overhead Press (Smith Machine)",
+      "merged": [
+        {
+          "previousName": "Overhead Press (Smith Machine)",
+          "inferredEquipment": "Smith Machine"
+        }
+      ]
+    },
+    {
+      "canonicalName": "Overhead Press (Close Grip)",
+      "scoringSource": "Overhead Press (Machine) (Close Grip)",
+      "merged": [
+        {
+          "previousName": "Overhead Press (Machine) (Close Grip)",
+          "inferredEquipment": "Machine"
+        }
+      ]
+    },
+    {
+      "canonicalName": "Overhead Press (Landmine) (Kneeling)",
+      "scoringSource": "Overhead Press (Landmine) (Barbell) (Kneeling)",
+      "merged": [
+        {
+          "previousName": "Overhead Press (Landmine) (Barbell) (Kneeling)",
+          "inferredEquipment": "Barbell"
+        }
+      ]
+    },
+    {
+      "canonicalName": "Overhead Press (Seated) (Close Grip) (Incline 60)",
+      "scoringSource": "Overhead Press (Dumbbell) (Seated) (Close Grip) (Incline 60)",
+      "merged": [
+        {
+          "previousName": "Overhead Press (Dumbbell) (Seated) (Close Grip) (Incline 60)",
+          "inferredEquipment": "Dumbbell"
+        }
+      ]
+    },
+    {
+      "canonicalName": "Overhead Press (Seated) (Wide Grip) (Incline 60)",
+      "scoringSource": "Overhead Press (Dumbbell) (Seated) (Wide Grip) (Incline 60)",
+      "merged": [
+        {
+          "previousName": "Overhead Press (Dumbbell) (Seated) (Wide Grip) (Incline 60)",
+          "inferredEquipment": "Dumbbell"
+        }
+      ]
+    },
+    {
+      "canonicalName": "Overhead Press (Standing)",
+      "scoringSource": "Overhead Press (Barbell) (Standing)",
+      "merged": [
+        {
+          "previousName": "Overhead Press (Barbell) (Standing)",
+          "inferredEquipment": "Barbell"
+        }
+      ]
+    },
+    {
+      "canonicalName": "Overhead Press (Wide Grip)",
+      "scoringSource": "Overhead Press (Machine) (Wide Grip)",
+      "merged": [
+        {
+          "previousName": "Overhead Press (Machine) (Wide Grip)",
+          "inferredEquipment": "Machine"
+        }
+      ]
+    },
+    {
+      "canonicalName": "Pullover",
+      "scoringSource": "Pullover (Machine)",
+      "merged": [
+        {
+          "previousName": "Pullover (Machine)",
+          "inferredEquipment": "Machine"
+        }
+      ]
+    },
+    {
+      "canonicalName": "Pullover (EZ Bar Attachment)",
+      "scoringSource": "Pullover (Cable) (EZ Bar Attachment)",
+      "merged": [
+        {
+          "previousName": "Pullover (Cable) (EZ Bar Attachment)",
+          "inferredEquipment": "Cable"
+        }
+      ]
+    },
+    {
+      "canonicalName": "Pullup (Neutral Grip)",
+      "scoringSource": "Pullup (Bodyweight) (Neutral Grip)",
+      "merged": [
+        {
+          "previousName": "Pullup (Bodyweight) (Neutral Grip)",
+          "inferredEquipment": "Bodyweight"
+        }
+      ]
+    },
+    {
+      "canonicalName": "Pushdown",
+      "scoringSource": "Pushdown (Machine)",
+      "merged": [
+        {
+          "previousName": "Pushdown (Machine)",
+          "inferredEquipment": "Machine"
+        }
+      ]
+    },
+    {
+      "canonicalName": "Pushdown (Bench Supported)",
+      "scoringSource": "Pushdown (Cable) (Bench Supported)",
+      "merged": [
+        {
+          "previousName": "Pushdown (Cable) (Bench Supported)",
+          "inferredEquipment": "Cable"
+        }
+      ]
+    },
+    {
+      "canonicalName": "Pushdown (EZ Bar Attachment)",
+      "scoringSource": "Pushdown (Cable) (EZ bar)",
+      "merged": [
+        {
+          "previousName": "Pushdown (Cable) (EZ bar)",
+          "inferredEquipment": "Cable"
+        }
+      ]
+    },
+    {
+      "canonicalName": "Pushdown (Unilateral)",
+      "scoringSource": "Pushdown (Cable) (Unilateral)",
+      "merged": [
+        {
+          "previousName": "Pushdown (Cable) (Unilateral)",
+          "inferredEquipment": "Cable"
+        }
+      ]
+    },
+    {
+      "canonicalName": "Pushdown (V-Bar)",
+      "scoringSource": "Pushdown (Cable) (V-Bar)",
+      "merged": [
+        {
+          "previousName": "Pushdown (Cable) (V-Bar)",
+          "inferredEquipment": "Cable"
+        }
+      ]
+    },
+    {
+      "canonicalName": "Pushdown (Wrist Cuffs)",
+      "scoringSource": "Pushdown (Cable) (Wrist Cuffs)",
+      "merged": [
+        {
+          "previousName": "Pushdown (Cable) (Wrist Cuffs)",
+          "inferredEquipment": "Cable"
+        }
+      ]
+    },
+    {
+      "canonicalName": "RDLs",
+      "scoringSource": "RDLs (Barbell)",
+      "merged": [
+        {
+          "previousName": "RDLs (Barbell)",
+          "inferredEquipment": "Barbell"
+        }
+      ]
+    },
+    {
+      "canonicalName": "Rear Delt Fly",
+      "scoringSource": "Rear Delt Fly (Machine)",
+      "merged": [
+        {
+          "previousName": "Rear Delt Fly (Machine)",
+          "inferredEquipment": "Machine"
+        }
+      ]
+    },
+    {
+      "canonicalName": "Rear Delt Fly (Unilateral)",
+      "scoringSource": "Rear Delt Fly (Cable) (Unilateral)",
+      "merged": [
+        {
+          "previousName": "Rear Delt Fly (Cable) (Unilateral)",
+          "inferredEquipment": "Cable"
+        }
+      ]
+    },
+    {
+      "canonicalName": "Reverse Curls (Standing)",
+      "scoringSource": "Reverse Curls (EZ Bar) (Standing)",
+      "merged": [
+        {
+          "previousName": "Reverse Curls (EZ Bar) (Standing)",
+          "inferredEquipment": "EZ Bar"
+        }
+      ]
+    },
+    {
+      "canonicalName": "Reverse Curls (Standing) (Strict)",
+      "scoringSource": "Reverse Curls (EZ Bar) (Standing) (Strict)",
+      "merged": [
+        {
+          "previousName": "Reverse Curls (EZ Bar) (Standing) (Strict)",
+          "inferredEquipment": "EZ Bar"
+        }
+      ]
+    },
+    {
+      "canonicalName": "Reverse Curls (Straight Bar)",
+      "scoringSource": "Reverse Curls (Cable) (Straight Bar)",
+      "merged": [
+        {
+          "previousName": "Reverse Curls (Cable) (Straight Bar)",
+          "inferredEquipment": "Cable"
+        }
+      ]
+    },
+    {
+      "canonicalName": "Reverse Curls (Unilateral)",
+      "scoringSource": "Reverse Curls (Cable) (Unilateral)",
+      "merged": [
+        {
+          "previousName": "Reverse Curls (Cable) (Unilateral)",
+          "inferredEquipment": "Cable"
+        }
+      ]
+    },
+    {
+      "canonicalName": "Row (Bent Over) (Unilateral)",
+      "scoringSource": "Row (Dumbbell) (Bent Over) (Unilateral)",
+      "merged": [
+        {
+          "previousName": "Row (Dumbbell) (Bent Over) (Unilateral)",
+          "inferredEquipment": "Dumbbell"
+        }
+      ]
+    },
+    {
+      "canonicalName": "Row (Bent Over) (Wide)",
+      "scoringSource": "Row (Barbell) (Bent Over) (Wide)",
+      "merged": [
+        {
+          "previousName": "Row (Barbell) (Bent Over) (Wide)",
+          "inferredEquipment": "Barbell"
+        }
+      ]
+    },
+    {
+      "canonicalName": "Row (Chest Supported) (Close Grip)",
+      "scoringSource": "Row (Machine) (Chest Supported) (Close Grip)",
+      "merged": [
+        {
+          "previousName": "Row (Machine) (Chest Supported) (Close Grip)",
+          "inferredEquipment": "Machine"
+        },
+        {
+          "previousName": "Row (T-Bar) (Chest Supported) (Close-Grip)",
+          "inferredEquipment": "T-Bar"
+        }
+      ]
+    },
+    {
+      "canonicalName": "Row (Chest Supported) (Unilateral)",
+      "scoringSource": "Row (Machine) (Chest Supported) (Unilateral)",
+      "merged": [
+        {
+          "previousName": "Row (Machine) (Chest Supported) (Unilateral)",
+          "inferredEquipment": "Machine"
+        }
+      ]
+    },
+    {
+      "canonicalName": "Row (Chest Supported) (Wide Grip)",
+      "scoringSource": "Row (T-Bar) (Chest Supported) (Wide-Grip)",
+      "merged": [
+        {
+          "previousName": "Row (Machine) (Chest Supported) (Wide Grip)",
+          "inferredEquipment": "Machine"
+        },
+        {
+          "previousName": "Row (T-Bar) (Chest Supported) (Wide-Grip)",
+          "inferredEquipment": "T-Bar"
+        }
+      ]
+    },
+    {
+      "canonicalName": "Row (Close Grip)",
+      "scoringSource": "Row (Cable Machine) (Close Grip)",
+      "merged": [
+        {
+          "previousName": "Row (Cable Machine) (Close Grip)",
+          "inferredEquipment": "Cable"
+        },
+        {
+          "previousName": "Row (Machine) (Close Grip)",
+          "inferredEquipment": "Machine"
+        }
+      ]
+    },
+    {
+      "canonicalName": "Row (Close Grip) (Unilateral)",
+      "scoringSource": "Row (Cable Machine) (Close Grip) (Unilateral)",
+      "merged": [
+        {
+          "previousName": "Row (Cable Machine) (Close Grip) (Unilateral)",
+          "inferredEquipment": "Cable"
+        },
+        {
+          "previousName": "Row (Machine) (Close Grip) (Unilateral)",
+          "inferredEquipment": "Machine"
+        }
+      ]
+    },
+    {
+      "canonicalName": "Row (Meadows)",
+      "scoringSource": "Row (T-Bar) (Meadows)",
+      "merged": [
+        {
+          "previousName": "Row (T-Bar) (Meadows)",
+          "inferredEquipment": "T-Bar"
+        }
+      ]
+    },
+    {
+      "canonicalName": "Row (Wide Grip) (Pronated)",
+      "scoringSource": "Row (Cable Machine) (Wide Grip) (Pronated)",
+      "merged": [
+        {
+          "previousName": "Row (Cable Machine) (Wide Grip) (Pronated)",
+          "inferredEquipment": "Cable"
+        }
+      ]
+    },
+    {
+      "canonicalName": "Skull Crushers (Lying)",
+      "scoringSource": "Skull Crushers (EZ Bar) (Lying)",
+      "merged": [
+        {
+          "previousName": "Skull Crushers (EZ Bar) (Lying)",
+          "inferredEquipment": "EZ Bar"
+        }
+      ]
+    },
+    {
+      "canonicalName": "Split Squats",
+      "scoringSource": "Split Squats (Dumbbells)",
+      "merged": [
+        {
+          "previousName": "Split Squats (Dumbbells)",
+          "inferredEquipment": "Dumbbell"
+        }
+      ]
+    },
+    {
+      "canonicalName": "Static Holds",
+      "scoringSource": "Static Holds (Cable)",
+      "merged": [
+        {
+          "previousName": "Static Holds (Cable)",
+          "inferredEquipment": "Cable"
+        },
+        {
+          "previousName": "Static Holds (Dumbbell)",
+          "inferredEquipment": "Dumbbell"
+        }
+      ]
+    },
+    {
+      "canonicalName": "Static Holds (Unilateral)",
+      "scoringSource": "Static Holds (Cable) (Unilateral)",
+      "merged": [
+        {
+          "previousName": "Static Holds (Cable) (Unilateral)",
+          "inferredEquipment": "Cable"
+        }
+      ]
+    },
+    {
+      "canonicalName": "Wrist Curls",
+      "scoringSource": "Wrist Curls (Cable)",
+      "merged": [
+        {
+          "previousName": "Wrist Curls (Cable)",
+          "inferredEquipment": "Cable"
+        }
+      ]
+    },
+    {
+      "canonicalName": "Wrist Curls (Unilateral)",
+      "scoringSource": "Wrist Curls (Cable) (Unilateral)",
+      "merged": [
+        {
+          "previousName": "Wrist Curls (Cable) (Unilateral)",
+          "inferredEquipment": "Cable"
+        }
+      ]
+    },
+    {
+      "canonicalName": "Y-Raise (Lying)",
+      "scoringSource": "Y-Raise (Cable) (Lying)",
+      "merged": [
+        {
+          "previousName": "Y-Raise (Cable) (Lying)",
+          "inferredEquipment": "Cable"
+        }
+      ]
+    },
+    {
+      "canonicalName": "Y-Raise (Standing)",
+      "scoringSource": "Y-Raise (Cable) (Standing)",
+      "merged": [
+        {
+          "previousName": "Y-Raise (Cable) (Standing)",
+          "inferredEquipment": "Cable"
+        }
+      ]
+    }
+  ]
+}

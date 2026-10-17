@@ -1,4 +1,4 @@
-import { isAnalyticalWorkingSet, isCompletedSet } from "../../set-model.js";
+import { isAnalyticalWorkingSet, isCompletedSet, usesPerDumbbellLoad } from "../../set-model.js";
 
 function formatDateShort(isoDate) {
   if (!isoDate) return "";
@@ -6,11 +6,11 @@ function formatDateShort(isoDate) {
   return new Intl.DateTimeFormat(undefined, { day: "numeric", month: "short" }).format(new Date(year, month - 1, day));
 }
 
-function formatWeightUnit(exerciseName) {
-  return /\(Dumbbell\)/i.test(exerciseName ?? "") ? "kg per dumbbell" : "kg";
+function formatWeightUnit(exerciseName, equipmentName = null) {
+  return usesPerDumbbellLoad({ equipmentName, exerciseName }) ? "kg per dumbbell" : "kg";
 }
 
-export function formatPreviousPerformanceSummary(historyRecord, exerciseName) {
+export function formatPreviousPerformanceSummary(historyRecord, exerciseName, equipmentName = null) {
   if (!historyRecord || !historyRecord.sets || historyRecord.sets.length === 0) {
     return {
       hasHistory: false,
@@ -19,7 +19,7 @@ export function formatPreviousPerformanceSummary(historyRecord, exerciseName) {
     };
   }
 
-  const unit = formatWeightUnit(exerciseName);
+  const unit = formatWeightUnit(exerciseName, equipmentName);
   const heading = `Last time on this machine — ${formatDateShort(historyRecord.performed_on)}`;
   const setList = historyRecord.sets.map((set) => {
     if (set.is_warmup) {
@@ -54,9 +54,9 @@ export function formatPreviousSetBadge(previousSet) {
   return `${weight} × ${reps}`;
 }
 
-export function formatInlinePreviousSet(previousSet, exerciseName) {
+export function formatInlinePreviousSet(previousSet, exerciseName, equipmentName = null) {
   if (!previousSet || !isCompletedSet(previousSet)) return null;
-  const unit = formatWeightUnit(exerciseName);
+  const unit = formatWeightUnit(exerciseName, equipmentName);
 
   if (previousSet.is_warmup) {
     const load = previousSet.weight !== null && previousSet.weight !== undefined ? `${previousSet.weight} ${unit}` : "";
@@ -78,7 +78,8 @@ export function createSessionHistoryContext(options) {
   const historyCache = new Map();
 
   function cacheKey(userId, gymId, exerciseId, equipmentId, excludeSessionId) {
-    return `${userId}_${gymId}_${exerciseId}_${equipmentId || "none"}_${excludeSessionId || "none"}`;
+    const scope = equipmentId ? "any-gym" : gymId;
+    return `${userId}_${scope}_${exerciseId}_${equipmentId || "none"}_${excludeSessionId || "none"}`;
   }
 
   return {
@@ -105,7 +106,7 @@ export function createSessionHistoryContext(options) {
           session_exercises!inner(
             id,
             exercise_order,
-            gym_equipment_id,
+            canonical_equipment_id,
             exercise_id,
             exercise_sets(
               id,
@@ -119,12 +120,15 @@ export function createSessionHistoryContext(options) {
           )
         `)
         .eq("owner_id", userId)
-        .eq("gym_id", gymId)
         .eq("status", "completed")
         .eq("session_exercises.exercise_id", exerciseId);
 
+      // Canonical equipment is the same identity at every gym, so a known machine or implement matches across
+      // gyms. Without recorded equipment the previous performance stays scoped to the current gym.
       if (equipmentId) {
-        query = query.eq("session_exercises.gym_equipment_id", equipmentId);
+        query = query.eq("session_exercises.canonical_equipment_id", equipmentId);
+      } else {
+        query = query.eq("gym_id", gymId);
       }
 
       if (excludeSessionId) {
@@ -147,7 +151,7 @@ export function createSessionHistoryContext(options) {
       const match = (session.session_exercises || [])
         .filter((exercise) => (
           exercise.exercise_id === exerciseId
-          && (!equipmentId || exercise.gym_equipment_id === equipmentId)
+          && (!equipmentId || exercise.canonical_equipment_id === equipmentId)
         ))
         .sort((a, b) => b.exercise_order - a.exercise_order || b.id - a.id)[0];
 
@@ -163,7 +167,7 @@ export function createSessionHistoryContext(options) {
       const result = {
         sessionId: session.id,
         performed_on: session.performed_on,
-        gymEquipmentId: match.gym_equipment_id,
+        equipmentId: match.canonical_equipment_id,
         sets,
       };
 

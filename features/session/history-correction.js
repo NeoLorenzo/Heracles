@@ -11,7 +11,7 @@ export function toSessionHistorySetPayload(setUpdates) {
 export async function persistSessionHistoryExerciseCorrection(client, exerciseId, equipmentId, setUpdates) {
   const { data, error } = await client.rpc("update_session_history_exercise", {
     p_session_exercise_id: exerciseId,
-    p_equipment_id: equipmentId,
+    p_canonical_equipment_id: equipmentId,
     p_set_updates: toSessionHistorySetPayload(setUpdates),
   });
 

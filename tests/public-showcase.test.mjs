@@ -19,20 +19,20 @@ import {
 import { ACTIVITY_WEEKS } from "../features/activity-heatmap.js";
 
 const read = (path) => readFile(new URL(`../${path}`, import.meta.url), "utf8");
-const relevanceMatrix = async () => parseRelevanceCsv(await read("EXERCISE_TO_MUSCLE_HYPERTROPHIC_RELEVANCE.csv"));
+const relevanceMatrix = async () => parseRelevanceCsv(await read("EXERCISE_TO_MUSCLE_HYPERTROPHIC_RELEVANCE_CANONICAL.csv"));
 const muscleCode = (header) => header.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "");
 
-test("public matrix explorer parses the authoritative relevance source without reinterpreting it", async () => {
+test("public matrix explorer parses the canonical relevance source without reinterpreting it", async () => {
   const matrix = await relevanceMatrix();
-  assert.equal(matrix.exercises.length, 138);
+  assert.equal(matrix.exercises.length, 116);
   assert.equal(matrix.muscles.length, 40);
-  assert.equal(matrix.exercises.length * matrix.muscles.length, 5520);
+  assert.equal(matrix.exercises.length * matrix.muscles.length, 4640);
   const allowed = new Set([0, 0.25, 0.5, 0.75, 1]);
   for (const exercise of matrix.exercises) {
     assert.equal(exercise.values.length, 40, exercise.name);
     for (const value of exercise.values) assert.ok(allowed.has(value), `${exercise.name} has undocumented coefficient ${value}`);
   }
-  assert.equal(orderExercisesForDisplay(matrix).length, 138, "display ordering must neither drop nor duplicate exercises");
+  assert.equal(orderExercisesForDisplay(matrix).length, 116, "display ordering must neither drop nor duplicate exercises");
 });
 
 test("public muscle-group presentation mirrors the ui_muscle_groups migration", async () => {
@@ -55,9 +55,9 @@ test("public muscle-group presentation mirrors the ui_muscle_groups migration", 
 
 test("public weighted-set example uses the dashboard's highest-child-coefficient rule", async () => {
   const lookup = buildExerciseMuscleLookup(await relevanceMatrix());
-  const groups = weightedSetsForOneSet(lookup, "Press (Dumbbell) (Incline 30)", { weight: 32.5, reps: 7, rir: 1 });
+  const groups = weightedSetsForOneSet(lookup, "Chest Press (Incline 30)", { weight: 32.5, reps: 7, rir: 1 });
   assert.deepEqual(groups.map(({ code, value }) => [code, value]), [["chest", 1], ["shoulders", 0.75], ["triceps", 0.75]]);
-  assert.deepEqual(weightedSetsForOneSet(lookup, "Press (Dumbbell) (Incline 30)", { weight: 32.5, reps: 7, rir: 4 }), [], "4+ RIR sets are not working sets");
+  assert.deepEqual(weightedSetsForOneSet(lookup, "Chest Press (Incline 30)", { weight: 32.5, reps: 7, rir: 4 }), [], "4+ RIR sets are not working sets");
 });
 
 test("public estimate lab reproduces the app's four e1RM values and refusals", () => {
@@ -100,6 +100,41 @@ test("public page labels example data and wires every sign-in call to action", a
   assert.match(app, /signInButtons = \[[^\]]*document\.querySelectorAll\("\[data-sign-in\]"\)/);
   assert.match(html, /<script type="module" src="\.\/features\/public-showcase\.js\?v=\d+"><\/script>/);
   assert.ok(serviceWorker.includes(`"/${html.match(/src="\.\/(features\/public-showcase\.js\?v=\d+)"/)[1]}"`));
-  assert.ok(serviceWorker.includes('"/EXERCISE_TO_MUSCLE_HYPERTROPHIC_RELEVANCE.csv"'));
+  assert.ok(serviceWorker.includes('"/EXERCISE_TO_MUSCLE_HYPERTROPHIC_RELEVANCE_CANONICAL.csv"'));
   assert.doesNotMatch(publicHome, /\btonnage (?:of|=|:)\s*\d/i, "the public page must not present a tonnage figure");
+});
+
+test("ISSUE 22: the canonical relevance source is the authored source projected through the documented scoring sources", async () => {
+  const [authored, canonical, decision] = await Promise.all([
+    read("EXERCISE_TO_MUSCLE_HYPERTROPHIC_RELEVANCE.csv").then(parseRelevanceCsv),
+    relevanceMatrix(),
+    read("docs/scientific/issue-22-canonical-exercise-identity.json").then(JSON.parse),
+  ]);
+  assert.deepEqual(canonical.muscles, authored.muscles);
+  const authoredByName = new Map(authored.exercises.map((exercise) => [exercise.name, exercise.values]));
+  // Issue #3 added the bench-supported pushdown after the CSV was published; it inherits the cable pushdown row.
+  authoredByName.set("Pushdown (Cable) (Bench Supported)", authoredByName.get("Pushdown (Cable) (EZ bar)"));
+  const canonicalByName = new Map(canonical.exercises.map((exercise) => [exercise.name, exercise.values]));
+  assert.equal(decision.canonicalExercises.length, canonical.exercises.length);
+  for (const { canonicalName, scoringSource } of decision.canonicalExercises) {
+    assert.deepEqual(canonicalByName.get(canonicalName), authoredByName.get(scoringSource), canonicalName);
+  }
+  for (const name of canonicalByName.keys()) {
+    assert.doesNotMatch(name, /\((Dumbbells?|Barbell|EZ Bar|Machine|Cable|Cable Machine|Smith Machine|T-Bar|Bodyweight|Plate Loaded)\)/, name);
+  }
+});
+
+test("ISSUE 22: the public page uses only canonical exercise names", async () => {
+  const [html, decision] = await Promise.all([
+    read("index.html"),
+    read("docs/scientific/issue-22-canonical-exercise-identity.json").then(JSON.parse),
+  ]);
+  const canonicalNames = new Set(decision.canonicalExercises.map(({ canonicalName }) => canonicalName));
+  for (const previousName of decision.canonicalExercises.flatMap(({ merged }) => merged.map(({ previousName }) => previousName))) {
+    if (canonicalNames.has(previousName)) continue;
+    assert.equal(html.includes(previousName), false, `index.html still shows ${previousName}`);
+  }
+  for (const [, pick] of html.matchAll(/data-matrix-pick="([^"]+)"/g)) {
+    assert.ok(canonicalNames.has(pick), `${pick} is a canonical exercise`);
+  }
 });

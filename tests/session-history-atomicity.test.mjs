@@ -17,7 +17,8 @@ test("Session History correction is submitted as one RPC with canonical field na
       return {
         data: {
           id: 44,
-          equipment_id: "Prime Leg Extension",
+          canonical_equipment_id: 7,
+          equipment_name_snapshot: "Prime Leg Extension P-105",
           sets: [{ id: 101, weight: 80, reps: 10, is_warmup: false, reported_rir_bucket: 2 }],
         },
         error: null,
@@ -29,7 +30,7 @@ test("Session History correction is submitted as one RPC with canonical field na
   const saved = await persistSessionHistoryExerciseCorrection(
     client,
     44,
-    "Prime Leg Extension",
+    7,
     setUpdates,
   );
 
@@ -37,7 +38,7 @@ test("Session History correction is submitted as one RPC with canonical field na
   assert.equal(calls[0].name, "update_session_history_exercise");
   assert.deepEqual(calls[0].args, {
     p_session_exercise_id: 44,
-    p_equipment_id: "Prime Leg Extension",
+    p_canonical_equipment_id: 7,
     p_set_updates: [{
       id: 101,
       weight: 80,
@@ -46,7 +47,8 @@ test("Session History correction is submitted as one RPC with canonical field na
       reported_rir_bucket: 2,
     }],
   });
-  assert.equal(saved.equipment_id, "Prime Leg Extension");
+  assert.equal(saved.canonical_equipment_id, 7);
+  assert.equal(saved.equipment_name_snapshot, "Prime Leg Extension P-105");
 });
 
 test("a failed correction remains one failed persistence operation with no fallback writes", async () => {
@@ -110,4 +112,24 @@ test("atomic correction migration validates the complete child set before any mu
   assert.match(migration, /grant execute on function public\.update_session_history_exercise\(bigint, text, jsonb\) to authenticated;/);
   assert.match(migration, /estimated_1rm_brzycki_rir_adjusted/);
   assert.match(migration, /estimated_1rm_epley_rir_adjusted/);
+});
+
+test("issue #22 correction function selects owned canonical equipment and validates before any mutation", async () => {
+  const migration = await read("supabase/migrations/20261017130000_canonical_equipment_identity.sql");
+  const start = migration.indexOf("create function public.update_session_history_exercise(");
+  const end = migration.indexOf("$$;", start);
+  const body = migration.slice(start, end);
+
+  assert.ok(start > 0 && end > start);
+  assert.match(body, /p_canonical_equipment_id bigint/);
+  const equipmentValidation = body.indexOf("Equipment not found or not owned by the current user.");
+  const exactSetValidation = body.indexOf("Submitted set IDs do not exactly match the current exercise sets.");
+  const firstExerciseMutation = body.indexOf("update public.session_exercises");
+  const firstSetMutation = body.indexOf("update public.exercise_sets es");
+  assert.ok(equipmentValidation > 0 && exactSetValidation > equipmentValidation);
+  assert.ok(firstExerciseMutation > exactSetValidation);
+  assert.ok(firstSetMutation > exactSetValidation);
+  assert.doesNotMatch(body, /set equipment_id = /, "the legacy free-text equipment field is no longer written");
+  assert.match(body, /when p_canonical_equipment_id is not distinct from target_exercise\.canonical_equipment_id\s+then target_exercise\.equipment_name_snapshot/);
+  assert.match(migration, /grant execute on function public\.update_session_history_exercise\(bigint, bigint, jsonb\) to authenticated;/);
 });

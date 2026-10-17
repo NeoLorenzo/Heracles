@@ -13,7 +13,7 @@ import {
   countWorkingSetsByDay,
   toLocalIsoDate,
 } from "./features/activity-heatmap.js";
-import { classifySet, formatSetClassification, isAnalyticalWorkingSet } from "./set-model.js";
+import { classifySet, formatSetClassification, isAnalyticalWorkingSet, usesPerDumbbellLoad } from "./set-model.js";
 
 const PAGE_TITLES = Object.freeze({
   home: "Home",
@@ -118,6 +118,8 @@ let muscleViewMode = "ui";
 let activePageName = "home";
 let globalExerciseCatalogue = [];
 let globalExerciseCataloguePromise = null;
+let equipmentCatalogue = null;
+let equipmentCataloguePromise = null;
 let activeWorkoutSession = null;
 let activeSessionLoadedForUser = null;
 let activeSessionLoadingForUser = null;
@@ -1119,7 +1121,7 @@ async function loadSessions(supabase) {
   let sessionRequest = supabase
     .from("workout_sessions")
     .select(
-      `id, performed_on, status, gyms(name), session_exercises${requestedSearch ? "!inner" : ""}(id, exercise_id, exercise_order, equipment_id, exercises${requestedSearch ? "!inner" : ""}(name), gym_equipment_id, equipment_name_snapshot, gym_equipment(id, name), exercise_sets(id, set_number, weight, reps, is_warmup, reported_rir_bucket, rir_source, is_drop_set, is_superset, estimated_1rm_brzycki, estimated_1rm_epley, estimated_1rm_brzycki_rir_adjusted, estimated_1rm_epley_rir_adjusted))`,
+      `id, performed_on, status, gym_id, gyms(name), session_exercises${requestedSearch ? "!inner" : ""}(id, exercise_id, exercise_order, equipment_id, exercises${requestedSearch ? "!inner" : ""}(name), gym_equipment_id, canonical_equipment_id, equipment_name_snapshot, equipment(id, name, kind), exercise_sets(id, set_number, weight, reps, is_warmup, reported_rir_bucket, rir_source, is_drop_set, is_superset, estimated_1rm_brzycki, estimated_1rm_epley, estimated_1rm_brzycki_rir_adjusted, estimated_1rm_epley_rir_adjusted))`,
       { count: "exact" },
     )
     .eq("owner_id", requestedUserId);
@@ -1216,6 +1218,7 @@ function appendSessionRows(rows) {
     exerciseList.className = "exercise-list";
 
     for (const exercise of exercises) {
+      exercise.sessionGymId = session.gym_id ?? null;
       exerciseList.append(createExerciseItem(exercise, session.performed_on));
     }
 
@@ -1391,13 +1394,13 @@ function createExerciseItem(exercise, performedOn) {
   const context = document.createElement("p");
   context.className = "exercise-context";
   const setCount = exercise.exercise_sets.length;
-  const equipmentName = exercise.equipment_name_snapshot || exercise.gym_equipment?.name || (exercise.equipment_id ? `Equipment ${exercise.equipment_id}` : null);
+  const equipmentName = getSessionExerciseEquipmentName(exercise);
   context.textContent = [
     `${setCount} ${setCount === 1 ? "set" : "sets"}`,
     equipmentName,
   ].filter(Boolean).join(" · ");
 
-  const weightUnit = formatWeightUnit(exercise.exercises.name);
+  const weightUnit = formatWeightUnit(exercise.exercises.name, equipmentName);
   const sets = document.createElement("table");
   sets.className = "set-table";
   const setHead = sets.createTHead().insertRow();
@@ -1461,12 +1464,18 @@ function showExerciseEditor(item, exercise, performedOn) {
 
   const equipmentLabel = document.createElement("label");
   equipmentLabel.className = "exercise-edit-equipment";
-  equipmentLabel.textContent = "Equipment ID";
-  const equipmentInput = document.createElement("input");
-  equipmentInput.type = "text";
-  equipmentInput.value = exercise.equipment_id ?? "";
-  equipmentInput.placeholder = "Not recorded";
+  equipmentLabel.textContent = "Machine / Equipment";
+  const equipmentInput = document.createElement("select");
+  equipmentInput.name = "canonical_equipment_id";
+  populateHistoryEquipmentOptions(equipmentInput, exercise, []);
   equipmentLabel.append(equipmentInput);
+  void ensureEquipmentCatalogue()
+    .then((catalogue) => {
+      if (equipmentInput.isConnected) populateHistoryEquipmentOptions(equipmentInput, exercise, catalogue);
+    })
+    .catch(() => {
+      // The current selection stays available even if the catalogue cannot be loaded.
+    });
 
   const setFields = document.createElement("div");
   setFields.className = "exercise-edit-sets";
@@ -1481,7 +1490,7 @@ function showExerciseEditor(item, exercise, performedOn) {
     number.textContent = `Set ${set.set_number}`;
 
     const weightLabel = document.createElement("label");
-    weightLabel.textContent = `Weight (${formatWeightUnit(exercise.exercises.name)})`;
+    weightLabel.textContent = `Weight (${formatWeightUnit(exercise.exercises.name, getSessionExerciseEquipmentName(exercise))})`;
     const weightInput = document.createElement("input");
     weightInput.type = "number";
     weightInput.name = "weight";
@@ -1582,7 +1591,7 @@ function showExerciseEditor(item, exercise, performedOn) {
     status.textContent = "Saving...";
 
     try {
-      await saveExerciseChanges(exercise, equipmentInput.value.trim() || null, setUpdates);
+      await saveExerciseChanges(exercise, equipmentInput.value ? Number(equipmentInput.value) : null, setUpdates);
       item.replaceWith(createExerciseItem(exercise, performedOn));
       datasetStatus.textContent = "Exercise saved. Estimated 1RM values updated.";
     } catch (error) {
@@ -1603,7 +1612,12 @@ async function saveExerciseChanges(exercise, equipmentId, setUpdates) {
   );
   if (requestedUserId !== activeUserId) throw new Error("Your session changed while saving.");
 
-  exercise.equipment_id = savedCorrection.equipment_id;
+  exercise.canonical_equipment_id = savedCorrection.canonical_equipment_id;
+  exercise.equipment_name_snapshot = savedCorrection.equipment_name_snapshot;
+  const savedEquipment = (equipmentCatalogue ?? []).find((equipment) => equipment.id === savedCorrection.canonical_equipment_id);
+  exercise.equipment = savedEquipment
+    ? { id: savedEquipment.id, name: savedEquipment.name, kind: savedEquipment.kind }
+    : (savedCorrection.canonical_equipment_id ? exercise.equipment : null);
   const savedSets = new Map((savedCorrection.sets ?? []).map((set) => [String(set.id), set]));
   for (const set of exercise.exercise_sets) {
     const saved = savedSets.get(String(set.id));
@@ -1612,16 +1626,86 @@ async function saveExerciseChanges(exercise, equipmentId, setUpdates) {
   dashboardFeature.invalidate();
 }
 
-function formatOneRepMaxRange(low, high, exerciseName = "", performedOn = null) {
-  return bodyWeightFeature.formatOneRepMaxRange(low, high, exerciseName, performedOn);
+function getSessionExerciseEquipmentName(exercise) {
+  return exercise.equipment?.name
+    || exercise.equipment_name_snapshot
+    || (exercise.equipment_id ? `Equipment ${exercise.equipment_id}` : null);
 }
 
-function formatWeightUnit(exerciseName) {
-  return /\(Dumbbell\)/i.test(exerciseName ?? "") ? "kg per dumbbell" : "kg";
+async function ensureEquipmentCatalogue() {
+  if (equipmentCataloguePromise) return equipmentCataloguePromise;
+  const supabase = supabaseClient;
+  const requestedUserId = activeUserId;
+  if (!supabase || !requestedUserId) return [];
+  equipmentCataloguePromise = (async () => {
+    const { data, error } = await supabase
+      .from("equipment")
+      .select("id, name, kind, is_active, equipment_gym_availability(gym_id)")
+      .eq("owner_id", requestedUserId)
+      .order("name", { ascending: true });
+    if (error) throw error;
+    if (requestedUserId === activeUserId) equipmentCatalogue = data ?? [];
+    return data ?? [];
+  })().catch((error) => {
+    equipmentCataloguePromise = null;
+    throw error;
+  });
+  return equipmentCataloguePromise;
+}
+
+// Session History corrections choose canonical equipment: generic implements and machines available at the
+// session's gym first, then every other owned equipment record. The current selection is always kept.
+function populateHistoryEquipmentOptions(select, exercise, catalogue) {
+  const sessionGymId = exercise.sessionGymId ?? null;
+  const currentId = exercise.canonical_equipment_id ? String(exercise.canonical_equipment_id) : "";
+  const gymOptions = [];
+  const otherOptions = [];
+  for (const equipment of catalogue) {
+    const usableHere = equipment.kind === "generic"
+      || (equipment.equipment_gym_availability || []).some((availability) => String(availability.gym_id) === String(sessionGymId));
+    if (equipment.is_active === false && String(equipment.id) !== currentId) continue;
+    (usableHere ? gymOptions : otherOptions).push(equipment);
+  }
+
+  const none = document.createElement("option");
+  none.value = "";
+  none.textContent = "Not recorded";
+  const fragment = document.createDocumentFragment();
+  fragment.append(none);
+  for (const [label, items] of [["At this gym", gymOptions], ["Other equipment", otherOptions]]) {
+    if (!items.length) continue;
+    const group = document.createElement("optgroup");
+    group.label = label;
+    for (const equipment of items) {
+      const option = document.createElement("option");
+      option.value = String(equipment.id);
+      option.textContent = equipment.name;
+      group.append(option);
+    }
+    fragment.append(group);
+  }
+  if (currentId && !catalogue.some((equipment) => String(equipment.id) === currentId)) {
+    const current = document.createElement("option");
+    current.value = currentId;
+    current.textContent = getSessionExerciseEquipmentName(exercise) ?? "Current equipment";
+    fragment.append(current);
+  }
+  select.replaceChildren(fragment);
+  select.value = currentId;
+}
+
+function formatOneRepMaxRange(low, high, exerciseName = "", performedOn = null, equipmentName = null) {
+  return bodyWeightFeature.formatOneRepMaxRange(low, high, exerciseName, performedOn, equipmentName);
+}
+
+function formatWeightUnit(exerciseName, equipmentName = null) {
+  return usesPerDumbbellLoad({ equipmentName, exerciseName }) ? "kg per dumbbell" : "kg";
 }
 
 function resetSessionResults() {
   sessionRequestVersion += 1;
+  equipmentCatalogue = null;
+  equipmentCataloguePromise = null;
   loadedRows = 0;
   totalRows = 0;
   loadingRows = false;

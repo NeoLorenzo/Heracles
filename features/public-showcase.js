@@ -4,7 +4,8 @@ import { calculateMuscleExposure } from "../analytics.js";
 import { activityLevel } from "./activity-heatmap.js";
 import { calculateBrzycki, calculateEpley, calculateRirE1rmEstimates, formatSetClassification } from "../set-model.js";
 
-export const RELEVANCE_SOURCE_PATH = "./EXERCISE_TO_MUSCLE_HYPERTROPHIC_RELEVANCE.csv";
+// Canonical (issue #22) projection of the authored relevance source: one row per equipment-independent exercise.
+export const RELEVANCE_SOURCE_PATH = "./EXERCISE_TO_MUSCLE_HYPERTROPHIC_RELEVANCE_CANONICAL.csv";
 
 // UI group identities mirror public.ui_muscle_groups (source_order, code, name).
 export const UI_MUSCLE_GROUPS = Object.freeze({
@@ -107,7 +108,7 @@ export const EXAMPLE_BODY_WEIGHT = Object.freeze([
   { day: 46, kg: 80.1 }, { day: 52, kg: 80.4 },
 ]);
 
-const HERO_EXERCISE = "Press (Dumbbell) (Incline 30)";
+const HERO_EXERCISE = "Chest Press (Incline 30)";
 const HERO_SET = Object.freeze({ weight: 32.5, reps: 7, rir: 1 });
 
 export function parseRelevanceCsv(text) {
@@ -185,10 +186,6 @@ export function orderMusclesForDisplay(muscles) {
 
 export function relevanceLevelLabel(value) {
   return RELEVANCE_LEVELS.find((level) => level.value === value)?.label ?? "Unrecognised coefficient";
-}
-
-export function isDumbbellExercise(exerciseName) {
-  return /\(Dumbbell\)/i.test(exerciseName ?? "");
 }
 
 // Mirrors the app contract: estimates exist only for completed RIR 0–3 working sets inside each formula's domain.
@@ -828,8 +825,8 @@ function renderMatrix(container, matrix) {
 
     const unit = document.createElement("p");
     unit.className = "inspector-zero";
-    unit.textContent = isDumbbellExercise(exercise.name) ? "Logged weight for this exercise is always per dumbbell." : "";
-    inspector.replaceChildren(heading, list, groupSummary, zeroes, ...(unit.textContent ? [unit] : []));
+    unit.textContent = "Equipment is recorded with each logged exercise; dumbbell loads are always logged per dumbbell.";
+    inspector.replaceChildren(heading, list, groupSummary, zeroes, unit);
   };
 
   const columnFromEvent = (event) => {

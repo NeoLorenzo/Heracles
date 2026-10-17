@@ -1,3 +1,5 @@
+import { usesPerDumbbellLoad } from "./set-model.js";
+
 export function calculateRelativeOneRepMaxRange(low, high, bodyWeightKg) {
   const lowValue = Number(low);
   const highValue = Number(high);
@@ -7,11 +9,11 @@ export function calculateRelativeOneRepMaxRange(low, high, bodyWeightKg) {
   return { low: lowValue / bodyWeight, high: highValue / bodyWeight };
 }
 
-export function resolveOneRepMaxEstimates(estimates, bodyWeightKg, { relativeEnabled = false, exerciseName = "" } = {}) {
+export function resolveOneRepMaxEstimates(estimates, bodyWeightKg, { relativeEnabled = false, exerciseName = "", equipmentName = null } = {}) {
   if (!estimates) return null;
   const entries = Object.entries(estimates);
   if (entries.some(([, value]) => !Number.isFinite(Number(value)))) return null;
-  const perDumbbell = /\(Dumbbell\)/i.test(exerciseName);
+  const perDumbbell = usesPerDumbbellLoad({ equipmentName, exerciseName });
   if (!relativeEnabled) {
     return { available: true, relative: false, values: Object.fromEntries(entries.map(([key, value]) => [key, Number(value)])), unit: perDumbbell ? "kg per dumbbell" : "kg" };
   }
@@ -32,13 +34,14 @@ export function resolveOneRepMaxRange({
   high,
   performedOn,
   exerciseName = "",
+  equipmentName = null,
   relativeEnabled = false,
   weightByDate = new Map(),
 }) {
   const lowValue = Number(low);
   const highValue = Number(high);
   if (low === null || high === null || !Number.isFinite(lowValue) || !Number.isFinite(highValue)) return null;
-  const perDumbbell = /\(Dumbbell\)/i.test(exerciseName);
+  const perDumbbell = usesPerDumbbellLoad({ equipmentName, exerciseName });
   if (!relativeEnabled) {
     return { available: true, relative: false, low: lowValue, high: highValue, unit: perDumbbell ? "kg per dumbbell" : "kg" };
   }

@@ -5,6 +5,23 @@ import { createSessionRenderer } from "./session-rendering.js";
 import { fetchRecentExerciseIds, fetchRecentGymIds } from "./session-recents.js";
 import { isDraftSet } from "../../set-model.js";
 
+// Canonical equipment is owned once per user. Generic implements (Dumbbell, Barbell, ...) are offered at every
+// gym; machines and unknown-model placeholders are offered where their gym availability says they are.
+export function buildEquipmentByGym(gymRows, equipmentRows) {
+  const byGym = new Map();
+  for (const gym of gymRows || []) {
+    const usable = (equipmentRows || []).filter((equipment) => (
+      equipment.is_active !== false
+      && (
+        equipment.kind === "generic"
+        || (equipment.equipment_gym_availability || []).some((availability) => String(availability.gym_id) === String(gym.id))
+      )
+    ));
+    byGym.set(gym.id, usable.map(({ id, name, kind, is_active }) => ({ id, name, kind, is_active: is_active !== false })));
+  }
+  return byGym;
+}
+
 export function createSessionFeature(options) {
   const {
     getClient,
@@ -123,9 +140,9 @@ export function createSessionFeature(options) {
       if (isConcluding) return;
       await reorderExercise(sessionExerciseId, direction);
     },
-    onEquipmentChange: async (sessionExerciseId, gymEquipmentId) => {
+    onEquipmentChange: async (sessionExerciseId, equipmentId) => {
       if (isConcluding) return;
-      await changeEquipment(sessionExerciseId, gymEquipmentId);
+      await changeEquipment(sessionExerciseId, equipmentId);
     },
     onCreateEquipment: async (sessionExerciseId, gymId, name) => {
       if (isConcluding) return;
@@ -149,18 +166,17 @@ export function createSessionFeature(options) {
 
     const [gymResult, equipResult] = await Promise.all([
       supabase.from("gyms").select("id, name, created_at").eq("owner_id", userId).order("name", { ascending: true }),
-      supabase.from("gym_equipment").select("id, gym_id, name, is_active").eq("owner_id", userId).eq("is_active", true).order("name", { ascending: true }),
+      supabase
+        .from("equipment")
+        .select("id, name, kind, is_active, equipment_gym_availability(gym_id)")
+        .eq("owner_id", userId)
+        .eq("is_active", true)
+        .order("name", { ascending: true }),
     ]);
 
     if (gymResult.data) gyms = gymResult.data;
     if (equipResult.data) {
-      const map = new Map();
-      for (const eq of equipResult.data) {
-        const list = map.get(eq.gym_id) || [];
-        list.push(eq);
-        map.set(eq.gym_id, list);
-      }
-      equipmentByGym = map;
+      equipmentByGym = buildEquipmentByGym(gyms, equipResult.data);
     }
     return gyms;
   }
@@ -179,9 +195,9 @@ export function createSessionFeature(options) {
         .from("session_exercises")
         .select(`
           exercise_id,
-          gym_equipment_id,
+          canonical_equipment_id,
           equipment_name_snapshot,
-          gym_equipment(id, name, is_active),
+          equipment(id, name, kind, is_active),
           workout_sessions!inner(
             id,
             owner_id,
@@ -195,7 +211,7 @@ export function createSessionFeature(options) {
         .eq("workout_sessions.gym_id", activeSession.gym_id)
         .eq("workout_sessions.status", "completed")
         .in("exercise_id", uniqueExerciseIds)
-        .not("gym_equipment_id", "is", null)
+        .not("canonical_equipment_id", "is", null)
         .order("performed_on", { foreignTable: "workout_sessions", ascending: false })
         .order("created_at", { foreignTable: "workout_sessions", ascending: false })
         .order("id", { foreignTable: "workout_sessions", ascending: false });
@@ -206,13 +222,13 @@ export function createSessionFeature(options) {
           const seenIds = new Set();
           const options = [];
           for (const row of exerciseRows) {
-            if (!row.gym_equipment_id || seenIds.has(row.gym_equipment_id)) continue;
-            seenIds.add(row.gym_equipment_id);
-            const eq = row.gym_equipment;
+            if (!row.canonical_equipment_id || seenIds.has(row.canonical_equipment_id)) continue;
+            seenIds.add(row.canonical_equipment_id);
+            const eq = row.equipment;
             if (eq && eq.is_active) {
-              options.push({ id: eq.id, name: eq.name, is_active: true });
-            } else if (row.equipment_name_snapshot) {
-              options.push({ id: row.gym_equipment_id, name: row.equipment_name_snapshot, is_active: false });
+              options.push({ id: eq.id, name: eq.name, kind: eq.kind, is_active: true });
+            } else if (eq?.name || row.equipment_name_snapshot) {
+              options.push({ id: row.canonical_equipment_id, name: eq?.name || row.equipment_name_snapshot, is_active: false });
             }
           }
           equipmentOptionsByExercise.set(exId, options);
@@ -252,8 +268,9 @@ export function createSessionFeature(options) {
         session_id,
         exercise_order,
         exercise_id,
-        gym_equipment_id,
+        canonical_equipment_id,
         equipment_name_snapshot,
+        equipment(id, name, kind),
         exercises(id, name),
         exercise_sets(
           id,
@@ -315,7 +332,7 @@ export function createSessionFeature(options) {
       const history = await historyContext.fetchPreviousPerformance(
         activeSession.gym_id,
         ex.exercise_id,
-        ex.gym_equipment_id,
+        ex.canonical_equipment_id,
         activeSession.id
       );
       historyContextByExercise.set(ex.id, history);
@@ -400,7 +417,7 @@ export function createSessionFeature(options) {
       const { data, error: rpcError } = await supabase.rpc("add_session_exercise", {
         p_session_id: activeSession.id,
         p_exercise_id: exerciseId,
-        p_gym_equipment_id: null,
+        p_equipment_id: null,
       });
 
       if (rpcError) throw rpcError;
@@ -494,7 +511,7 @@ export function createSessionFeature(options) {
     }
   }
 
-  async function changeEquipment(sessionExerciseId, gymEquipmentId) {
+  async function changeEquipment(sessionExerciseId, equipmentId) {
     if (isConcluding) return;
     const supabase = getClient();
     const userId = getUserId();
@@ -504,17 +521,19 @@ export function createSessionFeature(options) {
     if (!exercise) return;
 
     let snapshotName = null;
-    if (gymEquipmentId) {
+    let selectedEquipment = null;
+    if (equipmentId) {
       const gymEquips = equipmentByGym.get(activeSession.gym_id) || [];
-      const eq = gymEquips.find((item) => item.id === gymEquipmentId);
-      snapshotName = eq ? eq.name : null;
+      const historicalEquips = equipmentOptionsByExercise.get(exercise.exercise_id) || [];
+      selectedEquipment = [...gymEquips, ...historicalEquips].find((item) => item.id === equipmentId) || null;
+      snapshotName = selectedEquipment ? selectedEquipment.name : null;
     }
 
     try {
       const { error } = await supabase
         .from("session_exercises")
         .update({
-          gym_equipment_id: gymEquipmentId,
+          canonical_equipment_id: equipmentId,
           equipment_name_snapshot: snapshotName,
         })
         .eq("id", sessionExerciseId)
@@ -522,13 +541,16 @@ export function createSessionFeature(options) {
 
       if (error) throw error;
 
-      exercise.gym_equipment_id = gymEquipmentId;
+      exercise.canonical_equipment_id = equipmentId;
       exercise.equipment_name_snapshot = snapshotName;
+      exercise.equipment = selectedEquipment
+        ? { id: selectedEquipment.id, name: selectedEquipment.name, kind: selectedEquipment.kind ?? null }
+        : null;
 
       const history = await historyContext.fetchPreviousPerformance(
         activeSession.gym_id,
         exercise.exercise_id,
-        gymEquipmentId,
+        equipmentId,
         activeSession.id
       );
       historyContextByExercise.set(exercise.id, history);
@@ -546,9 +568,9 @@ export function createSessionFeature(options) {
     if (!supabase || !userId || !activeSession) return;
 
     try {
-      const { data, error } = await supabase.rpc("create_or_get_gym_equipment", {
-        p_gym_id: gymId,
+      const { data, error } = await supabase.rpc("create_or_get_equipment", {
         p_name: name,
+        p_gym_id: gymId,
       });
       if (error) throw error;
 

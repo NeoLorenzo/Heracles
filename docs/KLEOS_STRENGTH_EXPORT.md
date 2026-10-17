@@ -60,7 +60,9 @@ It is not extrapolated forward to today. If Heracles has no body-weight measurem
 
 `equipment_name` is taken from `session_exercises.equipment_name_snapshot` on the **same session exercise as the set that produced `best_1rm`**. This intentionally uses the historical snapshot rather than the current equipment catalogue name, so a later rename does not rewrite the context of an older lift.
 
-If a legacy session genuinely has no equipment snapshot, `equipment_name` is `null`. Kleos preserves that as missing equipment context rather than guessing a machine.
+If a legacy session genuinely has no equipment snapshot, `equipment_name` is `null`. Kleos preserves that as missing equipment context rather than guessing a machine. Issue #22 fills canonical equipment for such entries from their previous exercise name but deliberately leaves the snapshot empty, so this export does not change.
+
+Rows are grouped by exercise. After issue #22 merged exercises that differed only by equipment (for example barbell and Smith flat presses into `Chest Press`), those lifts share one row. Grouping by exercise and canonical equipment (`session_exercises.canonical_equipment_id`) is the planned follow-up in issue #45.
 
 ## Security boundary
 
