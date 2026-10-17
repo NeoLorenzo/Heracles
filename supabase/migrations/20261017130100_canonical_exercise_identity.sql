@@ -3,6 +3,8 @@
 -- canonical exercise (the survivor keeps its id and code; merged rows are retired with their original
 -- names and historical coefficients). New scientific versions are published for the canonical catalogue.
 -- Performed exercises without recorded equipment receive the equipment their previous name stated.
+-- Cable exercises recorded with a free-weight implement (the EZ-bar cable attachment logged as the EZ Bar)
+-- move to the cable station: the per-gym unknown-model cable placeholder.
 -- Every change is logged so heracles_private.issue22_undo_exercise_identity() can reverse this step.
 -- Decision record: docs/scientific/issue-22-canonical-exercise-identity.json
 
@@ -215,6 +217,16 @@ create table heracles_private.issue22_equipment_backfill (
   equipment_id bigint not null,
   source_exercise_name text not null,
   backfilled_at timestamptz not null default now()
+);
+
+create table heracles_private.issue22_equipment_corrections (
+  session_exercise_id bigint primary key,
+  owner_id uuid not null references auth.users(id) on delete cascade,
+  old_equipment_id bigint not null,
+  new_equipment_id bigint not null,
+  source_exercise_name text not null,
+  reason text not null check (reason in ('cable_attachment_recorded_as_free_weight')),
+  corrected_at timestamptz not null default now()
 );
 
 create table heracles_private.issue22_previous_scientific_versions (
@@ -620,6 +632,68 @@ begin
   where c.exercise_id = m.exercise_id
     and c.survivor_exercise_id <> c.exercise_id;
 
+  -- A cable exercise is performed on a cable station. A free-weight implement recorded on one is the cable
+  -- attachment (for example the EZ-bar attachment logged as the EZ Bar), never the equipment, so the occurrence
+  -- moves to the per-gym unknown-model cable placeholder. The historical name snapshot is kept.
+  drop table if exists pg_temp.issue22_attachment_plan;
+  create temporary table issue22_attachment_plan on commit drop as
+  select
+    se.id as session_exercise_id,
+    se.owner_id,
+    ws.gym_id,
+    se.canonical_equipment_id as old_equipment_id,
+    source.old_name as source_exercise_name,
+    identity.kind,
+    identity.name as equipment_name
+  from public.session_exercises se
+  join public.workout_sessions ws on ws.id = se.session_id and ws.owner_id = se.owner_id
+  join public.equipment recorded
+    on recorded.id = se.canonical_equipment_id
+   and recorded.owner_id = se.owner_id
+   and recorded.kind = 'generic'
+  left join heracles_private.issue22_session_exercise_repoints r on r.session_exercise_id = se.id
+  join heracles_private.issue22_exercise_changes source
+    on source.exercise_id = coalesce(r.old_exercise_id, se.exercise_id)
+   and source.inferred_equipment = 'Cable'
+  left join public.gyms g on g.id = ws.gym_id and g.owner_id = ws.owner_id
+  cross join lateral public.canonical_equipment_identity('Cable', g.name) as identity
+  where not exists (
+    select 1 from heracles_private.issue22_equipment_corrections c where c.session_exercise_id = se.id
+  );
+
+  with inserted as (
+    insert into public.equipment (owner_id, name, kind)
+    select distinct on (plan.owner_id, lower(plan.equipment_name))
+      plan.owner_id, plan.equipment_name, plan.kind
+    from pg_temp.issue22_attachment_plan plan
+    order by plan.owner_id, lower(plan.equipment_name)
+    on conflict (owner_id, lower(name)) do nothing
+    returning id, owner_id
+  )
+  insert into heracles_private.issue22_created_equipment (equipment_id, owner_id, step)
+  select id, owner_id, 'exercise_identity' from inserted;
+
+  insert into public.equipment_gym_availability (owner_id, equipment_id, gym_id)
+  select distinct plan.owner_id, e.id, plan.gym_id
+  from pg_temp.issue22_attachment_plan plan
+  join public.equipment e on e.owner_id = plan.owner_id and lower(e.name) = lower(plan.equipment_name)
+  where plan.gym_id is not null
+  on conflict (equipment_id, gym_id) do nothing;
+
+  insert into heracles_private.issue22_equipment_corrections (
+    session_exercise_id, owner_id, old_equipment_id, new_equipment_id, source_exercise_name, reason
+  )
+  select plan.session_exercise_id, plan.owner_id, plan.old_equipment_id, e.id, plan.source_exercise_name,
+    'cable_attachment_recorded_as_free_weight'
+  from pg_temp.issue22_attachment_plan plan
+  join public.equipment e on e.owner_id = plan.owner_id and lower(e.name) = lower(plan.equipment_name);
+
+  update public.session_exercises se
+  set canonical_equipment_id = c.new_equipment_id
+  from heracles_private.issue22_equipment_corrections c
+  where c.session_exercise_id = se.id
+    and se.canonical_equipment_id = c.old_equipment_id;
+
   -- Equipment stated by the previous exercise name, for occurrences with none recorded.
   drop table if exists pg_temp.issue22_backfill_plan;
   create temporary table issue22_backfill_plan on commit drop as
@@ -700,6 +774,12 @@ begin
   end if;
 
   update public.session_exercises se
+  set canonical_equipment_id = c.old_equipment_id
+  from heracles_private.issue22_equipment_corrections c
+  where c.session_exercise_id = se.id
+    and se.canonical_equipment_id = c.new_equipment_id;
+
+  update public.session_exercises se
   set canonical_equipment_id = null
   from heracles_private.issue22_equipment_backfill b
   where b.session_exercise_id = se.id
@@ -778,6 +858,7 @@ begin
 
   delete from heracles_private.issue22_created_equipment where step = 'exercise_identity';
   delete from heracles_private.issue22_equipment_backfill;
+  delete from heracles_private.issue22_equipment_corrections;
   delete from heracles_private.issue22_preset_membership_changes;
   delete from heracles_private.issue22_session_exercise_repoints;
 
@@ -826,6 +907,18 @@ begin
      )
   then
     raise exception 'History and presets must reference active canonical exercises only';
+  end if;
+
+  if exists (
+    select 1
+    from public.session_exercises se
+    join public.equipment e on e.id = se.canonical_equipment_id and e.kind = 'generic'
+    left join heracles_private.issue22_session_exercise_repoints r on r.session_exercise_id = se.id
+    join heracles_private.issue22_exercise_changes source
+      on source.exercise_id = coalesce(r.old_exercise_id, se.exercise_id)
+     and source.inferred_equipment = 'Cable'
+  ) then
+    raise exception 'Cable exercises must not reference free-weight equipment';
   end if;
 
   if (select count(*) from public.movement_mapping_versions where is_current) <> 1

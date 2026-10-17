@@ -1,7 +1,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select plan(68);
+select plan(71);
 
 -- Schema
 select has_table('public', 'equipment', 'canonical equipment table exists');
@@ -101,7 +101,8 @@ from (values
   ('Gym One', 'Matrix G3-S71'),
   ('Gym Two', 'Matrix G3-S71'),
   ('Gym One', 'Prime Extreme Row'),
-  ('Gym One', 'Prime Extreme Row P-122')
+  ('Gym One', 'Prime Extreme Row P-122'),
+  ('Gym One', 'EZ Bar')
 ) as v(gym_name, name)
 join public.gyms g on g.name = v.gym_name and g.owner_id = '22000000-0000-0000-0000-000000000001';
 
@@ -130,7 +131,8 @@ with source(label, performed_on, exercise_order, exercise_name, equipment_gym, e
     ('lateral_dumbbell_g2', date '2026-09-02', 1, 'Lateral Raise (Seated)', 'Gym Two', 'Dumbbells'),
     ('matrix_g2', date '2026-09-02', 2, 'Leg Extension', 'Gym Two', 'Matrix G3-S71'),
     ('machine_press_no_equipment_g2', date '2026-09-02', 3, 'Press (Machine) (Horizontal)', null, null),
-    ('lateral_no_gym', date '2026-08-01', 1, 'Lateral Raise (Seated)', null, null)
+    ('lateral_no_gym', date '2026-08-01', 1, 'Lateral Raise (Seated)', null, null),
+    ('pushdown_ez_attachment_g1', date '2026-09-01', 6, 'Pushdown (EZ Bar Attachment)', 'Gym One', 'EZ Bar')
 ), inserted as (
   insert into public.session_exercises (owner_id, session_id, exercise_order, exercise_id, gym_equipment_id, equipment_name_snapshot)
   select
@@ -169,7 +171,7 @@ from (values
 join public.workout_presets p on p.name = v.preset_name and p.owner_id = '22000000-0000-0000-0000-000000000001'
 join public.exercises e on e.name = v.exercise_name;
 
-select ok(heracles_private.issue22_canonicalize_gym_equipment() = 9, 'all nine legacy equipment rows are mapped');
+select ok(heracles_private.issue22_canonicalize_gym_equipment() = 10, 'all ten legacy equipment rows are mapped');
 select ok(heracles_private.issue22_reconcile_exercise_identity_data() >= 3, 'occurrences without equipment are backfilled');
 
 -- Equipment canonicalization
@@ -231,6 +233,16 @@ select is(
 select ok(
   (select equipment_name_snapshot is null from public.session_exercises where id = (select session_exercise_id from public.issue22_test_fixture_rows where label = 'lateral_no_gym')),
   'backfill does not invent a historical name snapshot'
+);
+select is(
+  (select e.name from public.session_exercises se join public.equipment e on e.id = se.canonical_equipment_id where se.id = (select session_exercise_id from public.issue22_test_fixture_rows where label = 'pushdown_ez_attachment_g1')),
+  'Cable (unknown model) — Gym One',
+  'a cable exercise logged with the free-weight EZ Bar moves to the cable station placeholder'
+);
+select is(
+  (select equipment_name_snapshot from public.session_exercises where id = (select session_exercise_id from public.issue22_test_fixture_rows where label = 'pushdown_ez_attachment_g1')),
+  'EZ Bar',
+  'the historical snapshot of the attachment correction is kept'
 );
 select is(
   (select set_count from public.workout_preset_exercises m join public.workout_presets p on p.id = m.preset_id join public.exercises e on e.id = m.exercise_id
@@ -378,6 +390,11 @@ select is(
 select ok(
   (select canonical_equipment_id is null from public.session_exercises where id = (select session_exercise_id from public.issue22_test_fixture_rows where label = 'lateral_no_gym')),
   'undo removes inferred equipment'
+);
+select is(
+  (select e.name from public.session_exercises se join public.equipment e on e.id = se.canonical_equipment_id where se.id = (select session_exercise_id from public.issue22_test_fixture_rows where label = 'pushdown_ez_attachment_g1')),
+  'EZ Bar',
+  'undo restores the originally recorded equipment of corrected cable entries'
 );
 
 select lives_ok($sql$ select heracles_private.issue22_undo_canonical_equipment(); $sql$, 'canonical equipment step can be undone');
