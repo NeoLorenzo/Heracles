@@ -8,7 +8,7 @@ The recap is computed in the browser (`workout-recap.js`, rendered by `features/
 
 ## When it appears
 
-The live-workout controller calls `onSessionConcluded` only after pending edits have been flushed and the `conclude_workout_session` RPC has succeeded. The app then replaces the finished live-workout history entry with Home and shows the recap page. If the recap cannot load (for example, the network drops right after saving), it says that the workout was saved and still offers **Done**. The recap never blocks or retries saving.
+The live-workout controller calls `onSessionConcluded` only after pending edits have been flushed and the `conclude_workout_session` RPC has succeeded. The app then replaces the finished live-workout history entry with Home and shows the recap page. Saving a correction to a reopened completed session ([Workout session lifecycle](WORKOUT_SESSION_LIFECYCLE.md)) is the exception: it returns to Session History instead, and the recap stays available there through **View recap**. If the recap cannot load (for example, the network drops right after saving), it says that the workout was saved and still offers **Done**. The recap never blocks or retries saving.
 
 The recap reloads the session from the server and refuses to summarise a session whose status is not `completed`, so it reflects stored data rather than unsaved in-memory edits. Because it is recalculated from stored rows, a later correction to a historical session changes what a recalculated recap would show.
 

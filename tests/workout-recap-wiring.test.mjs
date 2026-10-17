@@ -250,15 +250,18 @@ test("app opens the recap only after a successful conclusion and Done returns Ho
     read("package.json"),
     read("features/session/session-controller.js"),
   ]);
-  assert.match(app, /onSessionConcluded: \(concludedSessionId\) => \{[\s\S]*?showWorkoutRecap\(concludedSessionId\);[\s\S]*?\},\n  onSessionCancelled/);
-  assert.match(app, /onSessionCancelled: \(\) => \{[\s\S]*?showPage\("home"\);/);
+  // A saved history correction (#5) returns to Session History instead of opening a recap.
+  assert.match(app, /onSessionConcluded: \(concludedSessionId, \{ wasHistoryCorrection = false \} = \{\}\) => \{[\s\S]*?if \(wasHistoryCorrection\) \{[\s\S]*?\} else \{\n      showWorkoutRecap\(concludedSessionId\);\n    \}[\s\S]*?\},\n  onSessionCancelled/);
+  // Cancelling never opens a recap; a discarded correction (#5) returns to Session History.
+  assert.match(app, /onSessionCancelled: \(_sessionId, \{ restoredCompletedSession = false \} = \{\}\) => \{[\s\S]*?showPage\(restoredCompletedSession \? "session-history" : "home"\);/);
+  assert.doesNotMatch(app.slice(app.indexOf("onSessionCancelled:"), app.indexOf("onSessionCancelled:") + 600), /showWorkoutRecap/);
   assert.match(app, /onDone: \(origin\) => \{[\s\S]*?origin === RECAP_ORIGIN\.HISTORY && window\.history\.state\?\.workoutRecap\) window\.history\.back\(\);[\s\S]*?showPage\(origin === RECAP_ORIGIN\.HISTORY \? "session-history" : "home"\);/);
   assert.match(app, /function showWorkoutRecap\(sessionId\) \{\n  synchronizeSignedInPageUrl\("home", \{ replace: true \}\);\n  showPage\("workout-recap", \{ updateHistory: false \}\);\n  void workoutRecapFeature\.show\(sessionId\);/);
   const signedInPageSet = app.slice(app.indexOf("const URL_BACKED_SIGNED_IN_PAGES"), app.indexOf("const loadingView"));
   assert.doesNotMatch(signedInPageSet, /workout-recap/);
   assert.match(app, /liveSessionFeature\.reset\(\);\n  workoutRecapFeature\.reset\(\);/);
   // The conclusion RPC still runs before the callback, so the recap cannot interrupt saving.
-  assert.match(controller, /rpc\("conclude_workout_session"[\s\S]*if \(error\) throw error;[\s\S]*onSessionConcluded\(concludedSessionId\)/);
+  assert.match(controller, /rpc\("conclude_workout_session"[\s\S]*if \(error\) throw error;[\s\S]*onSessionConcluded\(concludedSessionId, \{ wasHistoryCorrection \}\)/);
   assert.match(html, /<section id="workout-recap-page" class="page-panel workout-recap-page" data-page-panel="workout-recap" hidden>/);
   assert.match(html, /id="workout-recap-container"/);
   assert.match(serviceWorker, /"\/features\/workout-recap\.js"/);
