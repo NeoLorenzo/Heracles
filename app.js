@@ -5,6 +5,7 @@ import { createBodyWeightFeature } from "./features/body-weight.js";
 import { createPresetFeature } from "./features/presets.js";
 import { createDashboardFeature } from "./features/dashboard.js";
 import { createSessionFeature } from "./features/session/session-controller.js";
+import { createPresetOrderSettingsFeature } from "./features/preset-order-settings.js";
 import { persistSessionHistoryExerciseCorrection } from "./features/session/history-correction.js";
 import { initializePullToRefresh } from "./features/pull-to-refresh.js";
 import {
@@ -127,6 +128,7 @@ const liveSessionFeature = createSessionFeature({
   getClient: () => supabaseClient,
   getUserId: () => activeUserId,
   ensureExerciseCatalogue: () => ensureGlobalExerciseCatalogue(supabaseClient),
+  ensureExerciseMuscleLookup: () => ensureExerciseMuscleLookup(supabaseClient),
   onNavigate: (page) => showPage(page),
   onSessionConcluded: () => {
     activeWorkoutSession = null;
@@ -167,6 +169,10 @@ const presetsFeature = createPresetFeature({
   onStartPreset: (presetId, presetName) => {
     liveSessionFeature.openStartWizard(presetId, presetName);
   },
+});
+const presetOrderSettingsFeature = createPresetOrderSettingsFeature({
+  getClient: () => supabaseClient,
+  getUserId: () => activeUserId,
 });
 const dashboardFeature = createDashboardFeature({
   getClient: () => supabaseClient,
@@ -368,6 +374,7 @@ function renderSession(session) {
     resetLiftList();
     dashboardFeature.reset();
     presetsFeature.reset();
+    presetOrderSettingsFeature.reset();
     bodyWeightFeature.reset();
     window.setTimeout(() => {
       void loadActiveSession(supabaseClient);
@@ -393,6 +400,7 @@ function showSignedOut() {
   resetLiftList();
   dashboardFeature.reset();
   presetsFeature.reset();
+  presetOrderSettingsFeature.reset();
   bodyWeightFeature.reset();
   liveSessionFeature.reset();
   const documentId = new URLSearchParams(window.location.search).get("literature");
@@ -559,6 +567,7 @@ function showPage(pageName, { updateHistory = true } = {}) {
   }
   if (pageName === "my-stuff" && activeUserId && supabaseClient) {
     void presetsFeature.load();
+    void presetOrderSettingsFeature.load();
   }
   if (pageName === "settings" && activeUserId && supabaseClient) {
     void bodyWeightFeature.loadSummary();

@@ -3,6 +3,7 @@ import { createSessionAutosave, SYNC_STATE, SYNC_LABELS } from "./session-autosa
 import { createSessionHistoryContext } from "./session-history-context.js";
 import { createSessionRenderer } from "./session-rendering.js";
 import { fetchRecentExerciseIds, fetchRecentGymIds } from "./session-recents.js";
+import { preparePresetExerciseOrder } from "./preset-order-inputs.js";
 import { isDraftSet } from "../../set-model.js";
 
 // Canonical equipment is owned once per user. Generic implements (Dumbbell, Barbell, ...) are offered at every
@@ -27,6 +28,7 @@ export function createSessionFeature(options) {
     getClient,
     getUserId,
     ensureExerciseCatalogue,
+    ensureExerciseMuscleLookup,
     onNavigate,
     onSessionConcluded,
     onSessionCancelled,
@@ -246,7 +248,7 @@ export function createSessionFeature(options) {
 
     const { data: sessionData, error: sessionError } = await supabase
       .from("workout_sessions")
-      .select("id, owner_id, gym_id, performed_on, status, source_preset_id, source_preset_name, created_at")
+      .select("id, owner_id, gym_id, performed_on, status, source_preset_id, source_preset_name, exercise_order_basis, created_at")
       .eq("owner_id", userId)
       .eq("status", "in_progress")
       .limit(1)
@@ -1066,10 +1068,26 @@ export function createSessionFeature(options) {
     if (wizardModal && wizardModal.open) wizardModal.close();
 
     try {
-      const { data, error } = await supabase.rpc("start_or_resume_workout_session", {
-        p_gym_id: gymId,
-        p_preset_id: presetId,
-      });
+      const params = { p_gym_id: gymId, p_preset_id: presetId };
+      if (presetId !== null && presetId !== undefined) {
+        try {
+          const plannedOrder = await preparePresetExerciseOrder({
+            supabase,
+            userId: getUserId(),
+            presetId,
+            ensureExerciseMuscleLookup,
+          });
+          if (plannedOrder.exerciseIds.length) {
+            params.p_exercise_order = plannedOrder.exerciseIds;
+            params.p_exercise_order_basis = plannedOrder.basis;
+          }
+        } catch (orderError) {
+          // The server falls back to a stable alphabetical order and records that basis.
+          console.warn("Could not plan the preset exercise order.", orderError);
+        }
+      }
+
+      const { data, error } = await supabase.rpc("start_or_resume_workout_session", params);
 
       if (error) throw error;
       await loadActiveSession();
