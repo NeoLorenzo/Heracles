@@ -283,6 +283,15 @@ export function createSessionRenderer(options) {
       titleRow.append(titleLockup, syncBadge);
       header.append(titleRow);
 
+      const isHistoryCorrection = session.is_history_correction === true;
+      if (isHistoryCorrection) {
+        const correctionNotice = document.createElement("p");
+        correctionNotice.className = "live-correction-notice";
+        correctionNotice.setAttribute("role", "note");
+        correctionNotice.textContent = `Correcting a completed workout from ${formatDateLong(session.performed_on)}. Save corrections to update your history, or discard them to restore the original.`;
+        header.append(correctionNotice);
+      }
+
       if (errorMessage) {
         const errorBanner = document.createElement("div");
         errorBanner.className = "live-error-banner";
@@ -805,7 +814,7 @@ export function createSessionRenderer(options) {
       const cancelBtn = document.createElement("button");
       cancelBtn.type = "button";
       cancelBtn.className = "text-button danger-link cancel-session-button";
-      cancelBtn.textContent = "Cancel workout";
+      cancelBtn.textContent = isHistoryCorrection ? "Discard corrections" : "Cancel workout";
       cancelBtn.addEventListener("click", onCancelSession);
       leftActions.append(cancelBtn);
 
@@ -821,7 +830,9 @@ export function createSessionRenderer(options) {
       const concludeBtn = document.createElement("button");
       concludeBtn.type = "button";
       concludeBtn.className = "primary-button conclude-session-button";
-      concludeBtn.textContent = isConcluding ? "Finishing…" : "Finish workout";
+      concludeBtn.textContent = isHistoryCorrection
+        ? (isConcluding ? "Saving…" : "Save corrections")
+        : (isConcluding ? "Finishing…" : "Finish workout");
       concludeBtn.disabled = isConcluding || !hasCompletedSet;
       if (!hasCompletedSet) {
         concludeBtn.title = "Log at least one completed set to finish this workout.";

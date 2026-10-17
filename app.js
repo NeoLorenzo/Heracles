@@ -7,6 +7,11 @@ import { createDashboardFeature } from "./features/dashboard.js";
 import { createSessionFeature } from "./features/session/session-controller.js";
 import { createPresetOrderSettingsFeature } from "./features/preset-order-settings.js";
 import { persistSessionHistoryExerciseCorrection } from "./features/session/history-correction.js";
+import {
+  ACTIVE_WORKOUT_CONFLICT_MESSAGE,
+  deleteCompletedWorkoutSession,
+  describeSessionForDeletion,
+} from "./features/session/session-lifecycle.js";
 import { initializePullToRefresh } from "./features/pull-to-refresh.js";
 import {
   activityCalendarStart,
@@ -82,6 +87,10 @@ const sessionInProgress = document.querySelector("#session-in-progress");
 const concludeSessionButton = document.querySelector("#conclude-session");
 const sessionModalStatus = document.querySelector("#session-modal-status");
 const liftList = document.querySelector("#lift-list");
+const deleteSessionModal = document.querySelector("#delete-session-modal");
+const deleteSessionDescription = document.querySelector("#delete-session-description");
+const keepSessionButton = document.querySelector("#keep-session-button");
+const confirmDeleteSessionButton = document.querySelector("#confirm-delete-session-button");
 const loadMoreButton = document.querySelector("#load-more");
 const sessionSearch = document.querySelector("#session-search");
 const clearSessionSearchButton = document.querySelector("#clear-session-search");
@@ -130,19 +139,23 @@ const liveSessionFeature = createSessionFeature({
   ensureExerciseCatalogue: () => ensureGlobalExerciseCatalogue(supabaseClient),
   ensureExerciseMuscleLookup: () => ensureExerciseMuscleLookup(supabaseClient),
   onNavigate: (page) => showPage(page),
-  onSessionConcluded: () => {
+  onSessionConcluded: (_sessionId, { wasHistoryCorrection = false } = {}) => {
     activeWorkoutSession = null;
     activeSessionLoadedForUser = activeUserId;
     updateSessionButton();
-    showPage("home");
+    // A saved correction returns to the history it corrected, refreshed from the server.
+    if (wasHistoryCorrection) resetSessionResults();
+    showPage(wasHistoryCorrection ? "session-history" : "home");
     dashboardFeature.invalidate();
     if (activeUserId && supabaseClient) void loadSessions(supabaseClient);
   },
-  onSessionCancelled: () => {
+  onSessionCancelled: (_sessionId, { restoredCompletedSession = false } = {}) => {
     activeWorkoutSession = null;
     activeSessionLoadedForUser = activeUserId;
     updateSessionButton();
-    showPage("home");
+    // Discarding a correction restores the completed session; show it back in history.
+    if (restoredCompletedSession) resetSessionResults();
+    showPage(restoredCompletedSession ? "session-history" : "home");
     dashboardFeature.invalidate();
     if (activeUserId && supabaseClient) void loadSessions(supabaseClient);
   },
@@ -1241,12 +1254,113 @@ function appendSessionRows(rows) {
     summaryCopy.append(context);
     if (sessionMuscleViews) summaryCopy.append(sessionMuscleViews);
     summary.append(summaryCopy);
-    disclosure.append(summary, exerciseList);
+    disclosure.append(summary);
+    if (session.status === "completed") disclosure.append(createSessionLifecycleActions(session, item));
+    disclosure.append(exerciseList);
     item.append(disclosure);
     fragment.append(item);
   }
 
   liftList.append(fragment);
+}
+
+function createSessionLifecycleActions(session, item) {
+  const actions = document.createElement("div");
+  actions.className = "session-lifecycle-actions";
+
+  const reopenButton = document.createElement("button");
+  reopenButton.type = "button";
+  reopenButton.className = "secondary-button compact session-reopen-button";
+  reopenButton.textContent = "Edit as workout";
+
+  const deleteButton = document.createElement("button");
+  deleteButton.type = "button";
+  deleteButton.className = "text-button danger-link session-delete-button";
+  deleteButton.textContent = "Delete workout";
+
+  const status = document.createElement("p");
+  status.className = "session-lifecycle-status";
+  status.setAttribute("role", "status");
+
+  // Reopening reuses the single in-progress workout slot, so it waits for the active workout.
+  const syncReopenAvailability = () => {
+    reopenButton.disabled = Boolean(activeWorkoutSession);
+    if (activeWorkoutSession) status.textContent = ACTIVE_WORKOUT_CONFLICT_MESSAGE;
+  };
+  syncReopenAvailability();
+
+  reopenButton.addEventListener("click", () => {
+    void reopenHistorySession(session, reopenButton, status, syncReopenAvailability);
+  });
+  deleteButton.addEventListener("click", () => {
+    confirmHistorySessionDeletion(session, item, status, syncReopenAvailability);
+  });
+
+  actions.append(reopenButton, deleteButton, status);
+  return actions;
+}
+
+async function reopenHistorySession(session, button, status, syncReopenAvailability) {
+  if (!supabaseClient || !activeUserId) return;
+  const requestedUserId = activeUserId;
+  button.disabled = true;
+  status.textContent = "Opening this workout for correction…";
+
+  try {
+    const reopenedSession = await liveSessionFeature.reopenSession(session.id);
+    if (requestedUserId !== activeUserId) return;
+    activeWorkoutSession = reopenedSession;
+    activeSessionLoadedForUser = requestedUserId;
+    updateSessionButton();
+    dashboardFeature.invalidate();
+    resetSessionResults();
+  } catch (error) {
+    if (requestedUserId !== activeUserId) return;
+    syncReopenAvailability();
+    status.textContent = `Could not reopen this workout: ${error.message}`;
+  }
+}
+
+function confirmHistorySessionDeletion(session, item, status, syncReopenAvailability) {
+  const description = describeSessionForDeletion(session, formatDate);
+  if (!deleteSessionModal) {
+    if (window.confirm(`Delete this workout? ${description}. This cannot be undone.`)) {
+      void deleteHistorySession(session, item, status, syncReopenAvailability);
+    }
+    return;
+  }
+
+  deleteSessionDescription.textContent = description;
+  keepSessionButton.onclick = () => deleteSessionModal.close();
+  confirmDeleteSessionButton.onclick = () => {
+    deleteSessionModal.close();
+    void deleteHistorySession(session, item, status, syncReopenAvailability);
+  };
+  deleteSessionModal.showModal();
+  keepSessionButton.focus();
+}
+
+async function deleteHistorySession(session, item, status, syncReopenAvailability) {
+  if (!supabaseClient || !activeUserId) return;
+  const requestedUserId = activeUserId;
+  const buttons = [...item.querySelectorAll("button")];
+  for (const button of buttons) button.disabled = true;
+  status.textContent = "Deleting workout…";
+
+  try {
+    await deleteCompletedWorkoutSession(supabaseClient, session.id);
+    if (requestedUserId !== activeUserId) return;
+    item.remove();
+    loadedRows = Math.max(0, loadedRows - 1);
+    totalRows = Math.max(0, totalRows - 1);
+    datasetStatus.textContent = `Workout deleted. ${formatSessionResultCount(totalRows, sessionSearchQuery)}`;
+    dashboardFeature.invalidate();
+  } catch (error) {
+    if (requestedUserId !== activeUserId) return;
+    for (const button of buttons) button.disabled = false;
+    syncReopenAvailability();
+    status.textContent = `Could not delete this workout: ${error.message}`;
+  }
 }
 
 function createMusclePillList(muscles, view, scope) {

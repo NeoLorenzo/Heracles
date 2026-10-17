@@ -997,6 +997,20 @@
           </div>
         </dialog>
 
+        <dialog id="delete-session-modal" class="session-modal" aria-labelledby="delete-session-title" aria-describedby="delete-session-message">
+          <div class="session-modal-card cancel-workout-card">
+            <div class="modal-header">
+              <h2 id="delete-session-title">Delete this workout?</h2>
+            </div>
+            <p id="delete-session-description" class="cancel-workout-message"></p>
+            <p id="delete-session-message" class="cancel-workout-message">This permanently removes the session and every exercise and set logged in it. Analytics and previous-performance context will no longer include it.</p>
+            <div class="modal-actions cancel-workout-actions">
+              <button id="keep-session-button" class="secondary-button" type="button">Keep workout</button>
+              <button id="confirm-delete-session-button" class="danger-button" type="button">Delete workout</button>
+            </div>
+          </div>
+        </dialog>
+
         <section id="session-history-page" class="page-panel" data-page-panel="session-history" hidden>
           <header class="data-header history-header">
             <div>
